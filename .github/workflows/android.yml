@@ -49,5 +49,31 @@ jobs:
           emulator-boot-timeout: 1200
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back none -camera-front none -no-metrics
           script: |
+            adb kill-server || true
+            adb start-server
+            adb wait-for-device
+
+            echo "Waiting for emulator to be fully online..."
+            for _ in $(seq 1 120); do
+              state="$(adb -s emulator-5554 get-state 2>/dev/null || true)"
+              boot="$(adb -s emulator-5554 shell getprop sys.boot_completed 2>/dev/null | tr -d '\r' || true)"
+              if [ "$state" = "device" ] && [ "$boot" = "1" ]; then
+                break
+              fi
+              sleep 2
+            done
+
+            state="$(adb -s emulator-5554 get-state || true)"
+            boot="$(adb -s emulator-5554 shell getprop sys.boot_completed | tr -d '\r' || true)"
+            if [ "$state" != "device" ] || [ "$boot" != "1" ]; then
+              echo "Emulator did not become healthy in time."
+              adb devices -l || true
+              adb -s emulator-5554 shell getprop || true
+              exit 1
+            fi
+
+            echo "Checking package manager responsiveness..."
+            adb -s emulator-5554 shell pm path android >/dev/null
+
             ./gradlew --no-daemon connectedDebugAndroidTest
             ./.ci/verify-sms-flow.sh emulator-5554
