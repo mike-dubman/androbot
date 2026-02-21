@@ -2,11 +2,7 @@ package com.androbot.app
 
 object PhoneNumberNormalizer {
     fun normalize(value: String): String {
-        val trimmed = value.trim()
-        return if (trimmed.startsWith("+")) {
-            "+" + trimmed.drop(1).filter { it.isDigit() }
-        } else {
-            trimmed.filter { it.isDigit() }
-        }
+        // Normalize to digits-only so "+1555123..." and "1555123..." match.
+        return value.trim().filter { it.isDigit() }
     }
 }
