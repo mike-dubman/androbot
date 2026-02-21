@@ -1,0 +1,21 @@
+services:
+  emulator:
+    image: budtmo/docker-android:emulator_13.0
+    platform: ${ANDROBOT_PLATFORM}
+    privileged: true
+    environment:
+      - DEVICE=Samsung Galaxy S10
+    ports:
+      - "5554:5554"
+      - "5555:5555"
+      - "6080:6080"
+
+  ci:
+    image: ghcr.io/cirruslabs/android-sdk:35
+    platform: ${ANDROBOT_PLATFORM}
+    working_dir: /workspace
+    volumes:
+      - ./:/workspace
+    depends_on:
+      - emulator
+    entrypoint: ["bash", "/workspace/.ci/run-local-ci.sh"]
