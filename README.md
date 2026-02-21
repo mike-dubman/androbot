@@ -297,6 +297,13 @@ Instrumentation tests:
 make test-device
 ```
 
+CI emulator job also runs SMS integration verification (`.ci/verify-sms-flow.sh`):
+
+- installs debug APK
+- configures first trusted sender via debug test receiver
+- sends emulator SMS `volume max`
+- asserts call/ring volumes reach max
+
 All tests:
 
 ```bash
