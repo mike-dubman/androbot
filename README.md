@@ -24,19 +24,6 @@ Current scope is intentionally narrow:
   - Optional: SMS commands from a trusted sender (`trusted add/remove/list`)
 - Action target: call, ring, and media stream volume.
 
-## Upgrade Behavior (Trusted Senders)
-
-Trusted senders are stored in `SharedPreferences` file `androbot_trusted_senders`.
-On normal app upgrade (installing newer APK over existing app with same package name), trusted senders are preserved.
-
-Guarantees in current implementation:
-
-- Upgrade migration path exists in `TrustedSenderStore`.
-- Migration normalizes/deduplicates existing senders.
-- Migration does not reset/remove sender list.
-
-Trusted senders are removed only if app data is cleared or app is uninstalled.
-
 ## Quick Start
 
 1. Clone/open this project.
@@ -46,20 +33,33 @@ Trusted senders are removed only if app data is cleared or app is uninstalled.
 make doctor
 ```
 
-3. Build and install:
+3. Build release APK:
 
 ```bash
-make build
-make install
+make build-release
 ```
 
-4. Open the app and configure trusted senders in UI:
+4. Choose deployment target:
+
+Real phone (USB adb):
+
+```bash
+adb install -r app/build/outputs/apk/release/app-release-unsigned.apk
+```
+
+Emulator/dev flow (debug build):
+
+```bash
+See `Debug Build` section below.
+```
+
+5. Open the app and configure trusted senders in UI:
    - enter phone number
    - tap `Add`
    - use `Remove` as needed
    - trusted list is shown on screen
 
-5. Send SMS from a trusted number, e.g. `volume max`.
+6. Send SMS from a trusted number, e.g. `volume max`.
 
 ## Build
 
@@ -72,7 +72,7 @@ Build notes:
 - `make` targets run `gradle`/`adb` from Docker containers.
 - Compose is resolved by `scripts/compose.sh` (local `docker compose` plugin, or `docker/compose` container fallback).
 - Container platform is auto-detected from host arch (`arm64` -> `linux/arm64`, `x86_64` -> `linux/amd64`).
-- Optional override example: `ANDROBOT_PLATFORM=linux/amd64 make build`
+- Optional override example: `ANDROBOT_PLATFORM=linux/amd64 make build-release`
 
 Validate tooling:
 
@@ -80,16 +80,24 @@ Validate tooling:
 make doctor
 ```
 
+Build release APK (default):
+
+```bash
+make build-release
+```
+
+Release APK output:
+
+- `app/build/outputs/apk/release/app-release-unsigned.apk`
+
+## Debug Build
+
+Use this for emulator/dev loops.
+
 Build debug APK:
 
 ```bash
 make build
-```
-
-Quick local loop:
-
-```bash
-make quick
 ```
 
 ## Install
@@ -106,12 +114,6 @@ Manual emulator control:
 make emu-up
 make emu-logs
 make emu-down
-```
-
-Deploy to real phone over adb TCP (Docker adb):
-
-```bash
-PHONE_IP=192.168.1.50 PHONE_PORT=5555 make deploy
 ```
 
 ## Deploy to Real Phone
@@ -132,13 +134,11 @@ On phone:
 
 ### 2. Build APK
 
-```bash
-make build
-```
+Use the `Build` section above (`make build-release`).
 
 APK output:
 
-- `app/build/outputs/apk/debug/app-debug.apk`
+- `app/build/outputs/apk/release/app-release-unsigned.apk`
 
 ### 3. Connect and verify phone
 
@@ -151,10 +151,10 @@ Accept the RSA fingerprint prompt on phone if shown.
 ### 4. Install APK
 
 ```bash
-adb install -r app/build/outputs/apk/debug/app-debug.apk
+adb install -r app/build/outputs/apk/release/app-release-unsigned.apk
 ```
 
-Alternative via Docker adb (TCP mode):
+Alternative via Docker adb (debug flow):
 
 ```bash
 PHONE_IP=<PHONE_IP> PHONE_PORT=5555 make deploy
@@ -179,7 +179,7 @@ After first USB connection:
 ```bash
 adb tcpip 5555
 adb connect <PHONE_IP>:5555
-adb install -r app/build/outputs/apk/debug/app-debug.apk
+adb install -r app/build/outputs/apk/release/app-release-unsigned.apk
 ```
 
 Then you can deploy using Docker adb:
@@ -252,7 +252,7 @@ Unit tests:
 make test-unit
 ```
 
-Instrumentation tests:
+Device tests:
 
 ```bash
 make test-device
@@ -321,7 +321,7 @@ Notes:
 - `app/src/main/java/com/androbot/app/` - app logic
 - `app/src/main/res/` - UI resources
 - `app/src/test/` - unit tests
-- `app/src/androidTest/` - instrumentation tests
+- `app/src/androidTest/` - device tests
 - `.github/workflows/android.yml` - GitHub Actions CI
 - `scripts/dev.sh` - local command orchestrator (Dockerized tools)
 - `scripts/gradlew.sh` - Gradle launcher in `ci` container

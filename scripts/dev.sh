@@ -64,6 +64,10 @@ build() {
   gradle_run assembleDebug
 }
 
+build_release() {
+  gradle_run assembleRelease
+}
+
 install_apk() {
   if [[ ! -f "$APK_PATH" ]]; then
     echo "APK not found. Building debug APK first..."
@@ -153,6 +157,7 @@ Usage: ./scripts/dev.sh <command>
 Commands:
   doctor        Validate Dockerized toolchain
   build         Build debug APK (Gradle in ci container)
+  build-release Build release APK (Gradle in ci container)
   install       Install debug APK to docker emulator via adb in ci container
   deploy        Deploy debug APK to real phone via adb TCP (Docker adb)
   test-unit     Run JVM unit tests (Gradle in ci container)
@@ -171,6 +176,7 @@ USAGE
 case "${1:-}" in
   doctor) doctor ;;
   build) build ;;
+  build-release) build_release ;;
   install) install_apk ;;
   deploy) deploy_phone_tcp ;;
   test-unit) test_unit ;;

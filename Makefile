@@ -1,13 +1,17 @@
 SHELL := /bin/bash
 
-.PHONY: help doctor build install deploy test-unit test-device test ci quick release release-tag
+.PHONY: help doctor build build-release install deploy emu-up emu-down emu-logs test-unit test-device test ci quick release release-tag
 
 help:
 	@echo "Targets:"
 	@echo "  make doctor      - check required local tools"
 	@echo "  make build       - build debug APK"
+	@echo "  make build-release - build release APK"
 	@echo "  make install     - install debug APK via adb"
 	@echo "  make deploy      - deploy debug APK to real phone via adb TCP"
+	@echo "  make emu-up      - start emulator container with web UI (advanced debug)"
+	@echo "  make emu-down    - stop emulator container"
+	@echo "  make emu-logs    - follow emulator container logs"
 	@echo "  make test-unit   - run JVM unit tests"
 	@echo "  make test-device - run instrumentation tests"
 	@echo "  make test        - run unit + instrumentation tests"
@@ -25,11 +29,24 @@ doctor:
 build:
 	@./scripts/dev.sh build
 
+build-release:
+	@./scripts/dev.sh build-release
+
 install:
 	@DEVICE="$(DEVICE)" ./scripts/dev.sh install
 
 deploy:
 	@PHONE_IP="$(PHONE_IP)" PHONE_PORT="$(PHONE_PORT)" ./scripts/dev.sh deploy
+
+emu-up:
+	@./scripts/compose.sh -f docker-compose.ci.yml up -d emulator
+	@echo "Emulator UI: http://localhost:6080"
+
+emu-down:
+	@./scripts/compose.sh -f docker-compose.ci.yml stop emulator
+
+emu-logs:
+	@./scripts/compose.sh -f docker-compose.ci.yml logs -f emulator
 
 test-unit:
 	@./scripts/dev.sh test-unit
