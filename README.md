@@ -333,3 +333,7 @@ make ci
 - `scripts/gradlew.sh` - Gradle launcher in `ci` container
 - `scripts/compose.sh` - Compose wrapper with arch detection
 - `Makefile` - convenience targets
+
+## License
+
+This project is licensed under the MIT License. See \.
