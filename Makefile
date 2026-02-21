@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 
-.PHONY: help doctor build build-release install deploy emu-up emu-down emu-logs test-unit test-device test ci quick release release-tag
+.PHONY: help doctor build build-release install deploy emu-up emu-down emu-logs test-unit test-device test ci quick release release-cli release-tag
 
 help:
 	@echo "Targets:"
@@ -18,10 +18,12 @@ help:
 	@echo "  make ci          - run Docker local CI"
 	@echo "  make quick       - build + install + unit tests"
 	@echo "  make release     - create git tag and GitHub release with APK"
+	@echo "  make release-cli - trigger GitHub release workflow_dispatch via gh"
 	@echo ""
 	@echo "Optional: DEVICE=<adb-serial> make install"
 	@echo "Optional: PHONE_IP=<phone-lan-ip> PHONE_PORT=5555 make deploy"
 	@echo "Required for release: VERSION=0.2.0 make release"
+	@echo "Required for release-cli: VERSION=0.2.0 [RELEASE_PUBLISH=draft|published] make release-cli"
 
 doctor:
 	@./scripts/dev.sh doctor
@@ -67,3 +69,19 @@ quick:
 
 release:
 	@VERSION="$(VERSION)" ./scripts/release.sh
+
+release-cli:
+	@if [ -z "$(VERSION)" ]; then \
+	  echo "VERSION is required. Example: VERSION=0.2.0 make release-cli"; \
+	  exit 1; \
+	fi
+	@PUBLISH="$${RELEASE_PUBLISH:-draft}"; \
+	if [ "$$PUBLISH" != "draft" ] && [ "$$PUBLISH" != "published" ]; then \
+	  echo "RELEASE_PUBLISH must be draft or published"; \
+	  exit 1; \
+	fi; \
+	if [ -n "$(RELEASE_NOTES)" ]; then \
+	  gh workflow run release.yml -f version="$(VERSION)" -f publish="$$PUBLISH" -f notes="$(RELEASE_NOTES)"; \
+	else \
+	  gh workflow run release.yml -f version="$(VERSION)" -f publish="$$PUBLISH"; \
+	fi

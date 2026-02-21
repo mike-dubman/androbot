@@ -1,0 +1,118 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version (e.g. 0.3.0 or v0.3.0)"
+        required: true
+        type: string
+      publish:
+        description: "Release visibility"
+        required: true
+        default: draft
+        type: choice
+        options:
+          - draft
+          - published
+      notes:
+        description: "Optional release notes prefix"
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Normalize release metadata
+        id: meta
+        run: |
+          set -euo pipefail
+          VERSION="${{ inputs.version }}"
+          if [[ "$VERSION" =~ ^v ]]; then
+            TAG="$VERSION"
+            PLAIN="${VERSION#v}"
+          else
+            TAG="v$VERSION"
+            PLAIN="$VERSION"
+          fi
+
+          DEBUG_ASSET="androbot-debug-${TAG}.apk"
+          RELEASE_ASSET="androbot-release-unsigned-${TAG}.apk"
+
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "version=$PLAIN" >> "$GITHUB_OUTPUT"
+          echo "debug_asset=$DEBUG_ASSET" >> "$GITHUB_OUTPUT"
+          echo "release_asset=$RELEASE_ASSET" >> "$GITHUB_OUTPUT"
+
+      - name: Build debug and release APKs
+        run: |
+          ./gradlew --no-daemon assembleDebug assembleRelease
+
+      - name: Prepare release assets and changelog
+        env:
+          REPO: ${{ github.repository }}
+          TAG: ${{ steps.meta.outputs.tag }}
+          DEBUG_ASSET: ${{ steps.meta.outputs.debug_asset }}
+          RELEASE_ASSET: ${{ steps.meta.outputs.release_asset }}
+          INPUT_NOTES: ${{ inputs.notes }}
+        run: |
+          set -euo pipefail
+          cp app/build/outputs/apk/debug/app-debug.apk "$DEBUG_ASSET"
+          cp app/build/outputs/apk/release/app-release-unsigned.apk "$RELEASE_ASSET"
+
+          PREV_TAG="$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || true)"
+          if [[ -n "$PREV_TAG" ]]; then
+            CHANGELOG="$(git log --pretty=format:'- %h %s' "${PREV_TAG}..HEAD")"
+          else
+            CHANGELOG="$(git log --pretty=format:'- %h %s')"
+          fi
+
+          DEBUG_URL="https://github.com/${REPO}/releases/download/${TAG}/${DEBUG_ASSET}"
+          RELEASE_URL="https://github.com/${REPO}/releases/download/${TAG}/${RELEASE_ASSET}"
+
+          {
+            echo "# Androbot ${TAG}"
+            echo
+            if [[ -n "$INPUT_NOTES" ]]; then
+              echo "$INPUT_NOTES"
+              echo
+            fi
+            echo "## Download"
+            echo
+            echo "- Debug APK: ${DEBUG_URL}"
+            echo "- Release APK (unsigned): ${RELEASE_URL}"
+            echo
+            echo "## Changelog"
+            echo
+            if [[ -n "$CHANGELOG" ]]; then
+              echo "$CHANGELOG"
+            else
+              echo "- No commit changes detected."
+            fi
+          } > release-body.md
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.meta.outputs.tag }}
+          name: Androbot ${{ steps.meta.outputs.tag }}
+          body_path: release-body.md
+          draft: ${{ inputs.publish == 'draft' }}
+          files: |
+            ${{ steps.meta.outputs.debug_asset }}
+            ${{ steps.meta.outputs.release_asset }}

@@ -72,6 +72,8 @@ Build notes:
 - `make` targets run `gradle`/`adb` from Docker containers.
 - Compose is resolved by `scripts/compose.sh` (local `docker compose` plugin, or `docker/compose` container fallback).
 - Container platform is auto-detected from host arch (`arm64` -> `linux/arm64`, `x86_64` -> `linux/amd64`).
+- Gradle builds default to `linux/amd64` containers (including Apple Silicon) for reliable `aapt2`.
+- Gradle container heap defaults to `-Xmx1536m`; override with `ANDROBOT_GRADLE_JVMARGS`.
 - Optional override example: `ANDROBOT_PLATFORM=linux/amd64 make build-release`
 
 Validate tooling:
