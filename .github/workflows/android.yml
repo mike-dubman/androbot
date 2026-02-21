@@ -52,3 +52,4 @@ jobs:
             ./.ci/wait-emulator-healthy.sh emulator-5554 120 2
             ./gradlew --no-daemon connectedDebugAndroidTest
             ./.ci/verify-sms-flow.sh emulator-5554
+            bash ./.ci/verify-app-lifecycle.sh emulator-5554

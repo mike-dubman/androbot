@@ -19,6 +19,15 @@ class TestControlReceiver : BroadcastReceiver() {
                 Log.i(TAG, "ADD_TRUSTED sender=$sender added=$added")
             }
 
+            ACTION_LOG_TRUSTED_STATE -> {
+                val label = intent.getStringExtra(EXTRA_LABEL).orEmpty()
+                val trusted = TrustedSenderPolicy(context).trustedSenders()
+                Log.i(
+                    TAG,
+                    "TRUSTED_STATE label=$label count=${trusted.size} senders=${trusted.joinToString(",")}"
+                )
+            }
+
             ACTION_SET_VOLUME_PERCENT -> {
                 val percent = intent.getIntExtra(EXTRA_PERCENT, 0).coerceIn(0, 100)
                 val audio = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
@@ -66,6 +75,7 @@ class TestControlReceiver : BroadcastReceiver() {
         private const val TAG = "TestControlReceiver"
 
         private const val ACTION_ADD_TRUSTED = "com.androbot.app.TEST_ADD_TRUSTED"
+        private const val ACTION_LOG_TRUSTED_STATE = "com.androbot.app.TEST_LOG_TRUSTED_STATE"
         private const val ACTION_SET_VOLUME_PERCENT = "com.androbot.app.TEST_SET_VOLUME_PERCENT"
         private const val ACTION_LOG_VOLUME_SNAPSHOT = "com.androbot.app.TEST_LOG_VOLUME_SNAPSHOT"
 

@@ -265,6 +265,14 @@ CI emulator job also runs SMS integration verification (`.ci/verify-sms-flow.sh`
 - sends emulator SMS `volume max`
 - asserts media volume reaches max
 
+CI emulator job also runs app lifecycle verification (`.ci/verify-app-lifecycle.sh`):
+
+- installs debug APK
+- adds a trusted sender
+- kills app process and verifies trusted sender is preserved
+- upgrades app in place (`adb install -r`) and verifies trusted sender is preserved
+- uninstalls/reinstalls app and verifies trusted sender list is reset
+
 All tests:
 
 ```bash
