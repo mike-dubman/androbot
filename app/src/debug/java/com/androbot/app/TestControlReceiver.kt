@@ -24,11 +24,17 @@ class TestControlReceiver : BroadcastReceiver() {
                 val audio = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
                 val callMax = audio.getStreamMaxVolume(AudioManager.STREAM_VOICE_CALL)
                 val ringMax = audio.getStreamMaxVolume(AudioManager.STREAM_RING)
+                val mediaMax = audio.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
                 val call = ((percent / 100.0) * callMax).roundToInt()
                 val ring = ((percent / 100.0) * ringMax).roundToInt()
-                audio.setStreamVolume(AudioManager.STREAM_VOICE_CALL, call, 0)
-                audio.setStreamVolume(AudioManager.STREAM_RING, ring, 0)
-                Log.i(TAG, "SET_VOLUME_PERCENT percent=$percent call=$call/$callMax ring=$ring/$ringMax")
+                val media = ((percent / 100.0) * mediaMax).roundToInt()
+                safeSetVolume(audio, AudioManager.STREAM_VOICE_CALL, call)
+                safeSetVolume(audio, AudioManager.STREAM_RING, ring)
+                safeSetVolume(audio, AudioManager.STREAM_MUSIC, media)
+                Log.i(
+                    TAG,
+                    "SET_VOLUME_PERCENT percent=$percent call=$call/$callMax ring=$ring/$ringMax media=$media/$mediaMax"
+                )
             }
 
             ACTION_LOG_VOLUME_SNAPSHOT -> {
@@ -38,11 +44,21 @@ class TestControlReceiver : BroadcastReceiver() {
                 val callMax = audio.getStreamMaxVolume(AudioManager.STREAM_VOICE_CALL)
                 val ringCurrent = audio.getStreamVolume(AudioManager.STREAM_RING)
                 val ringMax = audio.getStreamMaxVolume(AudioManager.STREAM_RING)
+                val mediaCurrent = audio.getStreamVolume(AudioManager.STREAM_MUSIC)
+                val mediaMax = audio.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
                 Log.i(
                     TAG,
-                    "SNAPSHOT label=$label call=$callCurrent/$callMax ring=$ringCurrent/$ringMax"
+                    "SNAPSHOT label=$label call=$callCurrent/$callMax ring=$ringCurrent/$ringMax media=$mediaCurrent/$mediaMax"
                 )
             }
+        }
+    }
+
+    private fun safeSetVolume(audio: AudioManager, stream: Int, value: Int) {
+        try {
+            audio.setStreamVolume(stream, value, 0)
+        } catch (e: SecurityException) {
+            Log.i(TAG, "Skipping stream=$stream volume change due to security policy")
         }
     }
 
