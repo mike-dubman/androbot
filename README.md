@@ -22,21 +22,7 @@ Current scope is intentionally narrow:
 - Trusted sender management:
   - Primary: in-app UI (add/remove/list)
   - Optional: SMS commands from a trusted sender (`trusted add/remove/list`)
-- Action target: call and ring stream volume.
-
-## Versioning
-
-App version is defined in `app/build.gradle.kts`:
-
-- `versionCode`: integer, always increment on release
-- `versionName`: human-readable semantic version
-
-Current version:
-
-- `versionCode = 2`
-- `versionName = "0.2.0"`
-
-The app also displays current version in UI status header.
+- Action target: call, ring, and media stream volume.
 
 ## Upgrade Behavior (Trusted Senders)
 
@@ -50,48 +36,6 @@ Guarantees in current implementation:
 - Migration does not reset/remove sender list.
 
 Trusted senders are removed only if app data is cleared or app is uninstalled.
-
-## Architecture Selection
-
-Container platform is auto-detected by `scripts/compose.sh` from host architecture:
-
-- `arm64`/`aarch64` host -> `linux/arm64`
-- `x86_64`/`amd64` host -> `linux/amd64`
-
-Compose services in `docker-compose.ci.yml` use `${ANDROBOT_PLATFORM}`.
-
-Optional override:
-
-```bash
-ANDROBOT_PLATFORM=linux/amd64 make test
-ANDROBOT_PLATFORM=linux/arm64 make test
-```
-
-## Convenience Commands (Recommended)
-
-Use `make` targets for day-to-day work.
-All `gradle` and `adb` commands run from Docker containers.
-Compose is resolved by `scripts/compose.sh` using:
-
-- local `docker compose` plugin if available, or
-- `docker/compose` container fallback
-
-```bash
-make doctor
-make build
-make install
-make deploy
-make test-unit
-make test-device
-make test
-make ci
-```
-
-Quick loop:
-
-```bash
-make quick
-```
 
 ## Quick Start
 
@@ -123,10 +67,29 @@ Prerequisites:
 
 - Docker
 
+Build notes:
+
+- `make` targets run `gradle`/`adb` from Docker containers.
+- Compose is resolved by `scripts/compose.sh` (local `docker compose` plugin, or `docker/compose` container fallback).
+- Container platform is auto-detected from host arch (`arm64` -> `linux/arm64`, `x86_64` -> `linux/amd64`).
+- Optional override example: `ANDROBOT_PLATFORM=linux/amd64 make build`
+
+Validate tooling:
+
+```bash
+make doctor
+```
+
 Build debug APK:
 
 ```bash
 make build
+```
+
+Quick local loop:
+
+```bash
+make quick
 ```
 
 ## Install
@@ -135,6 +98,14 @@ Install to Docker emulator:
 
 ```bash
 make install
+```
+
+Manual emulator control:
+
+```bash
+make emu-up
+make emu-logs
+make emu-down
 ```
 
 Deploy to real phone over adb TCP (Docker adb):
@@ -271,17 +242,7 @@ Declared in manifest:
 
 ## Release
 
-Create and publish a GitHub Release (tag + release notes + debug APK asset):
-
-```bash
-VERSION=0.2.0 make release
-```
-
-Requirements:
-
-- Clean git working tree
-- `gh auth login` completed
-- Push access to `origin`
+Release process is documented in `RELEASE.md`.
 
 ## Test
 
@@ -302,7 +263,7 @@ CI emulator job also runs SMS integration verification (`.ci/verify-sms-flow.sh`
 - installs debug APK
 - configures first trusted sender via debug test receiver
 - sends emulator SMS `volume max`
-- asserts call/ring volumes reach max
+- asserts media volume reaches max
 
 All tests:
 
@@ -315,6 +276,31 @@ Full local CI pipeline:
 ```bash
 make ci
 ```
+
+## Advanced Debug: Emulator UI in Browser
+
+Start emulator container with browser-accessible UI:
+
+```bash
+make emu-up
+```
+
+Open:
+
+- `http://localhost:6080`
+
+Useful commands:
+
+```bash
+make emu-logs
+make emu-down
+```
+
+Notes:
+
+- This is useful for manual UI/SMS debugging against the same Docker emulator setup.
+- Emulator install/deploy command for this containerized emulator remains:
+  - `make install`
 
 ## Security Notes
 
