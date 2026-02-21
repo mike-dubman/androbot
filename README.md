@@ -1,4 +1,5 @@
 # Androbot
+[![Android CI](https://github.com/mike-dubman/androbot/actions/workflows/android.yml/badge.svg)](https://github.com/mike-dubman/androbot/actions/workflows/android.yml)
 
 Androbot is an Android automation app that listens for incoming SMS and executes a small, explicit set of device actions when messages come from trusted senders.
 
@@ -79,6 +80,7 @@ Compose is resolved by `scripts/compose.sh` using:
 make doctor
 make build
 make install
+make deploy
 make test-unit
 make test-device
 make test
@@ -135,6 +137,104 @@ Install to Docker emulator:
 make install
 ```
 
+Deploy to real phone over adb TCP (Docker adb):
+
+```bash
+PHONE_IP=192.168.1.50 PHONE_PORT=5555 make deploy
+```
+
+## Deploy to Real Phone
+
+### Prerequisites
+
+- Android phone with USB cable
+- Developer options enabled on phone
+- USB debugging enabled on phone
+- `adb` available on host machine (`android-platform-tools`)
+
+### 1. Enable developer mode and USB debugging
+
+On phone:
+
+- `Settings -> About phone -> Build number` (tap 7 times)
+- `Settings -> Developer options -> USB debugging` (enable)
+
+### 2. Build APK
+
+```bash
+make build
+```
+
+APK output:
+
+- `app/build/outputs/apk/debug/app-debug.apk`
+
+### 3. Connect and verify phone
+
+```bash
+adb devices
+```
+
+Accept the RSA fingerprint prompt on phone if shown.
+
+### 4. Install APK
+
+```bash
+adb install -r app/build/outputs/apk/debug/app-debug.apk
+```
+
+Alternative via Docker adb (TCP mode):
+
+```bash
+PHONE_IP=<PHONE_IP> PHONE_PORT=5555 make deploy
+```
+
+### 5. First app setup on phone
+
+1. Open `Androbot`
+2. Grant SMS permission when requested
+3. Add first trusted sender in UI
+
+### 6. Verify automation
+
+Send SMS from trusted number:
+
+- `volume max`
+
+### Optional: wireless ADB
+
+After first USB connection:
+
+```bash
+adb tcpip 5555
+adb connect <PHONE_IP>:5555
+adb install -r app/build/outputs/apk/debug/app-debug.apk
+```
+
+Then you can deploy using Docker adb:
+
+```bash
+PHONE_IP=<PHONE_IP> PHONE_PORT=5555 make deploy
+```
+
+### How to find phone IP
+
+Use the phone's Wi-Fi LAN IP (same network as your computer).
+
+From Android UI (most devices):
+
+1. `Settings -> Wi-Fi`
+2. Tap connected network
+3. Find `IP address` (example: `192.168.1.50`)
+
+From adb (after USB connect):
+
+```bash
+adb shell ip -f inet addr show wlan0
+```
+
+Look for `inet <IP>/...`, for example `inet 192.168.1.50/24`.
+
 ## Configure
 
 ### First trusted sender (UI only)
@@ -168,6 +268,20 @@ Declared in manifest:
 - `trusted add <phone>`
 - `trusted remove <phone>`
 - `trusted list`
+
+## Release
+
+Create and publish a GitHub Release (tag + release notes + debug APK asset):
+
+```bash
+VERSION=0.2.0 make release
+```
+
+Requirements:
+
+- Clean git working tree
+- `gh auth login` completed
+- Push access to `origin`
 
 ## Test
 

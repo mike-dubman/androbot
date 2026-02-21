@@ -6,6 +6,8 @@ cd "$ROOT_DIR"
 
 APK_PATH="app/build/outputs/apk/debug/app-debug.apk"
 ADB_SERIAL="${DEVICE:-emulator:5555}"
+PHONE_IP="${PHONE_IP:-}"
+PHONE_PORT="${PHONE_PORT:-5555}"
 
 require_docker() {
   if ! command -v docker >/dev/null 2>&1; then
@@ -30,6 +32,11 @@ ensure_emulator_up() {
 ci_bash() {
   require_docker
   compose run --rm --entrypoint bash ci -lc "$1"
+}
+
+ci_bash_no_deps() {
+  require_docker
+  compose run --rm --no-deps --entrypoint bash ci -lc "$1"
 }
 
 wait_for_emulator() {
@@ -69,6 +76,26 @@ install_apk() {
     adb start-server >/dev/null
     adb connect emulator:5555 >/dev/null || true
     adb -s ${ADB_SERIAL} install -r ${APK_PATH}
+  "
+}
+
+deploy_phone_tcp() {
+  if [[ -z "$PHONE_IP" ]]; then
+    echo "PHONE_IP is required for deploy."
+    echo "Example: PHONE_IP=192.168.1.50 make deploy"
+    exit 1
+  fi
+
+  if [[ ! -f "$APK_PATH" ]]; then
+    echo "APK not found. Building debug APK first..."
+    build
+  fi
+
+  ci_bash_no_deps "
+    set -euo pipefail
+    adb start-server >/dev/null
+    adb connect ${PHONE_IP}:${PHONE_PORT}
+    adb -s ${PHONE_IP}:${PHONE_PORT} install -r ${APK_PATH}
   "
 }
 
@@ -127,6 +154,7 @@ Commands:
   doctor        Validate Dockerized toolchain
   build         Build debug APK (Gradle in ci container)
   install       Install debug APK to docker emulator via adb in ci container
+  deploy        Deploy debug APK to real phone via adb TCP (Docker adb)
   test-unit     Run JVM unit tests (Gradle in ci container)
   test-device   Run instrumentation tests (adb + Gradle in ci container)
   test          Run unit + instrumentation tests
@@ -134,6 +162,8 @@ Commands:
 
 Optional env:
   DEVICE=<adb-serial>                Override adb serial (default: emulator:5555)
+  PHONE_IP=<phone-lan-ip>            Real phone IP for deploy command
+  PHONE_PORT=<port>                  ADB TCP port for deploy (default: 5555)
   ANDROBOT_PLATFORM=<linux/*>        Override auto platform detection
 USAGE
 }
@@ -142,6 +172,7 @@ case "${1:-}" in
   doctor) doctor ;;
   build) build ;;
   install) install_apk ;;
+  deploy) deploy_phone_tcp ;;
   test-unit) test_unit ;;
   test-device) test_device ;;
   test) test_all ;;
