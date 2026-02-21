@@ -7,28 +7,20 @@ TRUSTED_SENDER="15551234567"
 APK_PATH="app/build/outputs/apk/debug/app-debug.apk"
 KNOWN_PERCENT="${KNOWN_PERCENT:-0}"
 
-extract_stream_values() {
-  local stream_name="$1"
-  local line
-  line="$(adb -s "$SERIAL" shell dumpsys audio \
-    | awk -v stream="$stream_name" '
-        $0 ~ "- "stream":" {flag=1; next}
-        flag && /Current:/ {print; exit}
-      ')"
+snapshot_line() {
+  local label="$1"
+  adb -s "$SERIAL" shell am broadcast -a com.androbot.app.TEST_LOG_VOLUME_SNAPSHOT --es label "$label" >/dev/null
+  adb -s "$SERIAL" logcat -d -s TestControlReceiver:I | grep "SNAPSHOT label=$label" | tail -n 1
+}
 
-  local current speaker default inferred_max
-  current="$(echo "$line" | sed -E 's/.*Current:[[:space:]]*([0-9]+).*/\1/')"
-  speaker="$(echo "$line" | sed -nE 's/.*\(speaker\):[[:space:]]*([0-9]+).*/\1/p')"
-  default="$(echo "$line" | sed -nE 's/.*\(default\):[[:space:]]*([0-9]+).*/\1/p')"
-
-  if [[ -z "$speaker" ]]; then speaker="$current"; fi
-  if [[ -z "$default" ]]; then default="$current"; fi
-
-  inferred_max="$current"
-  if (( speaker > inferred_max )); then inferred_max="$speaker"; fi
-  if (( default > inferred_max )); then inferred_max="$default"; fi
-
-  echo "$current $speaker $default $inferred_max"
+parse_snapshot() {
+  local line="$1"
+  local call_cur call_max ring_cur ring_max
+  call_cur="$(echo "$line" | sed -nE 's/.*call=([0-9]+)\/([0-9]+).*/\1/p')"
+  call_max="$(echo "$line" | sed -nE 's/.*call=([0-9]+)\/([0-9]+).*/\2/p')"
+  ring_cur="$(echo "$line" | sed -nE 's/.*ring=([0-9]+)\/([0-9]+).*/\1/p')"
+  ring_max="$(echo "$line" | sed -nE 's/.*ring=([0-9]+)\/([0-9]+).*/\2/p')"
+  echo "$call_cur $call_max $ring_cur $ring_max"
 }
 
 echo "Building debug APK for SMS flow verification..."
@@ -40,54 +32,36 @@ adb -s "$SERIAL" install -r "$APK_PATH"
 echo "Granting RECEIVE_SMS permission..."
 adb -s "$SERIAL" shell pm grant "$APP_ID" android.permission.RECEIVE_SMS || true
 
+adb -s "$SERIAL" logcat -c
+
 echo "Adding trusted sender (${TRUSTED_SENDER}) via debug test receiver..."
-ADD_OUT="$(adb -s "$SERIAL" shell am broadcast -a com.androbot.app.TEST_ADD_TRUSTED --es sender "$TRUSTED_SENDER")"
-echo "$ADD_OUT"
+adb -s "$SERIAL" shell am broadcast -a com.androbot.app.TEST_ADD_TRUSTED --es sender "$TRUSTED_SENDER" >/dev/null
 
 echo "Setting known baseline volume (${KNOWN_PERCENT}%)..."
-SET_OUT="$(adb -s "$SERIAL" shell am broadcast -a com.androbot.app.TEST_SET_VOLUME_PERCENT --ei percent "$KNOWN_PERCENT")"
-echo "$SET_OUT"
+adb -s "$SERIAL" shell am broadcast -a com.androbot.app.TEST_SET_VOLUME_PERCENT --ei percent "$KNOWN_PERCENT" >/dev/null
 
-read -r known_call_cur known_call_spk known_call_def known_call_max < <(extract_stream_values "STREAM_VOICE_CALL")
-read -r known_ring_cur known_ring_spk known_ring_def known_ring_max < <(extract_stream_values "STREAM_RING")
-echo "Known baseline: call cur=${known_call_cur}, spk=${known_call_spk}, def=${known_call_def}, max=${known_call_max}; ring cur=${known_ring_cur}, spk=${known_ring_spk}, def=${known_ring_def}, max=${known_ring_max}"
+BASELINE_LINE="$(snapshot_line baseline)"
+read -r base_call_cur base_call_max base_ring_cur base_ring_max < <(parse_snapshot "$BASELINE_LINE")
+echo "Known baseline: call=${base_call_cur}/${base_call_max}; ring=${base_ring_cur}/${base_ring_max}"
 
 echo "Triggering SMS command: volume max"
 adb -s "$SERIAL" emu sms send "$TRUSTED_SENDER" "volume max"
 
-echo "Waiting for SMS flow to set volume to max and differ from known baseline..."
+echo "Waiting for SMS execution and volume to reach max..."
 for _ in $(seq 1 25); do
-  read -r call_cur call_spk call_def call_max < <(extract_stream_values "STREAM_VOICE_CALL")
-  read -r ring_cur ring_spk ring_def ring_max < <(extract_stream_values "STREAM_RING")
+  if adb -s "$SERIAL" logcat -d -s SmsCommandReceiver:I | grep -q "Command from .* -> EXECUTED"; then
+    AFTER_LINE="$(snapshot_line after)"
+    read -r call_cur call_max ring_cur ring_max < <(parse_snapshot "$AFTER_LINE")
+    echo "After SMS check: call=${call_cur}/${call_max}; ring=${ring_cur}/${ring_max}"
 
-  echo "After SMS check: call cur=${call_cur}, spk=${call_spk}, def=${call_def}, max=${call_max}; ring cur=${ring_cur}, spk=${ring_spk}, def=${ring_def}, max=${ring_max}"
-
-  call_is_max=false
-  ring_is_max=false
-  call_changed=false
-  ring_changed=false
-
-  if [[ "$call_spk" == "$call_max" && "$call_def" == "$call_max" ]]; then
-    call_is_max=true
+    if [[ "$call_cur" == "$call_max" && "$ring_cur" == "$ring_max" && ( "$call_cur" != "$base_call_cur" || "$ring_cur" != "$base_ring_cur" ) ]]; then
+      echo "SMS flow verification passed."
+      exit 0
+    fi
   fi
-  if [[ "$ring_spk" == "$ring_max" && "$ring_def" == "$ring_max" ]]; then
-    ring_is_max=true
-  fi
-
-  if [[ "$call_cur" != "$known_call_cur" || "$call_spk" != "$known_call_spk" || "$call_def" != "$known_call_def" ]]; then
-    call_changed=true
-  fi
-  if [[ "$ring_cur" != "$known_ring_cur" || "$ring_spk" != "$known_ring_spk" || "$ring_def" != "$known_ring_def" ]]; then
-    ring_changed=true
-  fi
-
-  if [[ "$call_is_max" == true && "$ring_is_max" == true && ( "$call_changed" == true || "$ring_changed" == true ) ]]; then
-    echo "SMS flow verification passed."
-    exit 0
-  fi
-
   sleep 2
 done
 
-echo "SMS flow verification failed: volume was not set to max (or remained at known baseline)."
+echo "SMS flow verification failed: command did not execute or volume did not transition to max."
+adb -s "$SERIAL" logcat -d -s SmsCommandReceiver:I TestControlReceiver:I || true
 exit 1

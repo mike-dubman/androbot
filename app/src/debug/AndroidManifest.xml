@@ -9,7 +9,7 @@
             <intent-filter>
                 <action android:name="com.androbot.app.TEST_ADD_TRUSTED" />
                 <action android:name="com.androbot.app.TEST_SET_VOLUME_PERCENT" />
-                <action android:name="com.androbot.app.TEST_ASSERT_VOLUME_MAX" />
+                <action android:name="com.androbot.app.TEST_LOG_VOLUME_SNAPSHOT" />
             </intent-filter>
         </receiver>
     </application>
