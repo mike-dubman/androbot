@@ -4,7 +4,7 @@ services:
     platform: ${ANDROBOT_PLATFORM}
     privileged: true
     environment:
-      - DEVICE=Samsung Galaxy S10
+      - DEVICE=Samsung Galaxy S25
     ports:
       - "5554:5554"
       - "5555:5555"

@@ -94,7 +94,15 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun appVersionLabel(): String {
-        val info = packageManager.getPackageInfo(packageName, 0)
+        val info = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            packageManager.getPackageInfo(
+                packageName,
+                PackageManager.PackageInfoFlags.of(0)
+            )
+        } else {
+            @Suppress("DEPRECATION")
+            packageManager.getPackageInfo(packageName, 0)
+        }
         val name = info.versionName ?: "unknown"
         val code = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             info.longVersionCode
