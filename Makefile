@@ -23,7 +23,7 @@ help:
 	@echo "Optional: APK_PATH=<path-to-apk> DEVICE=<adb-serial> make install"
 	@echo "Optional: APK_PATH=<path-to-apk> PHONE_IP=<phone-lan-ip> PHONE_PORT=5555 make deploy"
 	@echo "Required for release: VERSION=0.2.0 make release"
-	@echo "Required for release-cli: VERSION=0.2.0 [RELEASE_PUBLISH=draft|published] make release-cli"
+	@echo "Required for release-cli: VERSION=0.2.0 [RELEASE_PUBLISH=published|draft] make release-cli"
 
 doctor:
 	@./scripts/dev.sh doctor
@@ -75,7 +75,7 @@ release-cli:
 	  echo "VERSION is required. Example: VERSION=0.2.0 make release-cli"; \
 	  exit 1; \
 	fi
-	@PUBLISH="$${RELEASE_PUBLISH:-draft}"; \
+	@PUBLISH="$${RELEASE_PUBLISH:-published}"; \
 	if [ "$$PUBLISH" != "draft" ] && [ "$$PUBLISH" != "published" ]; then \
 	  echo "RELEASE_PUBLISH must be draft or published"; \
 	  exit 1; \

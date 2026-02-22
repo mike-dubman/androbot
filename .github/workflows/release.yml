@@ -10,11 +10,11 @@ on:
       publish:
         description: "Release visibility"
         required: true
-        default: draft
+        default: published
         type: choice
         options:
-          - draft
           - published
+          - draft
       notes:
         description: "Optional release notes prefix"
         required: false
