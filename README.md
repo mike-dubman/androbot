@@ -66,10 +66,11 @@ See `Debug Build` section below.
 Prerequisites:
 
 - Docker
+- adb (`android-platform-tools`) installed locally
 
 Build notes:
 
-- `make` targets run `gradle`/`adb` from Docker containers.
+- `make` targets run Gradle from Docker containers and adb from host.
 - Compose is resolved by `scripts/compose.sh` (local `docker compose` plugin, or `docker/compose` container fallback).
 - Container platform is auto-detected from host arch (`arm64` -> `linux/arm64`, `x86_64` -> `linux/amd64`).
 - Gradle builds default to `linux/amd64` containers (including Apple Silicon) for reliable `aapt2`.
@@ -156,10 +157,10 @@ Accept the RSA fingerprint prompt on phone if shown.
 adb install -r app/build/outputs/apk/release/app-release-unsigned.apk
 ```
 
-Alternative via Docker adb (debug flow):
+Alternative via local adb TCP (debug flow):
 
 ```bash
-PHONE_IP=<PHONE_IP> PHONE_PORT=5555 make deploy
+APK_PATH=<path-to-apk> PHONE_IP=<PHONE_IP> PHONE_PORT=5555 make deploy
 ```
 
 ### 5. First app setup on phone
@@ -184,10 +185,10 @@ adb connect <PHONE_IP>:5555
 adb install -r app/build/outputs/apk/release/app-release-unsigned.apk
 ```
 
-Then you can deploy using Docker adb:
+Then you can deploy using local adb:
 
 ```bash
-PHONE_IP=<PHONE_IP> PHONE_PORT=5555 make deploy
+APK_PATH=<path-to-apk> PHONE_IP=<PHONE_IP> PHONE_PORT=5555 make deploy
 ```
 
 ### How to find phone IP

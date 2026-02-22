@@ -20,6 +20,14 @@ compose() {
   "$ROOT_DIR/scripts/compose.sh" -f docker-compose.ci.yml "$@"
 }
 
+require_adb() {
+  if ! command -v adb >/dev/null 2>&1; then
+    echo "Missing required command: adb"
+    echo "Install on macOS: brew install android-platform-tools"
+    exit 1
+  fi
+}
+
 gradle_run() {
   "$ROOT_DIR/scripts/gradlew.sh" "$@"
 }
@@ -60,6 +68,25 @@ wait_for_emulator() {
   "
 }
 
+wait_for_emulator_local() {
+  require_adb
+  adb start-server >/dev/null
+  for _ in $(seq 1 60); do
+    if adb connect emulator:5555 >/dev/null 2>&1; then
+      break
+    fi
+    sleep 2
+  done
+  for _ in $(seq 1 60); do
+    if [ "$(adb -s "${ADB_SERIAL}" shell getprop sys.boot_completed | tr -d '\r')" = "1" ]; then
+      return
+    fi
+    sleep 2
+  done
+  echo "Emulator did not finish booting in time."
+  exit 1
+}
+
 build() {
   gradle_run assembleDebug
 }
@@ -74,13 +101,8 @@ install_apk() {
     build
   fi
   ensure_emulator_up
-  wait_for_emulator
-  ci_bash "
-    set -euo pipefail
-    adb start-server >/dev/null
-    adb connect emulator:5555 >/dev/null || true
-    adb -s ${ADB_SERIAL} install -r ${APK_PATH}
-  "
+  wait_for_emulator_local
+  adb -s "${ADB_SERIAL}" install -r "${APK_PATH}"
 }
 
 deploy_phone_tcp() {
@@ -95,12 +117,10 @@ deploy_phone_tcp() {
     build
   fi
 
-  ci_bash_no_deps "
-    set -euo pipefail
-    adb start-server >/dev/null
-    adb connect ${PHONE_IP}:${PHONE_PORT}
-    adb -s ${PHONE_IP}:${PHONE_PORT} install -r ${APK_PATH}
-  "
+  require_adb
+  adb start-server >/dev/null
+  adb connect "${PHONE_IP}:${PHONE_PORT}"
+  adb -s "${PHONE_IP}:${PHONE_PORT}" install -r "${APK_PATH}"
 }
 
 test_unit() {
@@ -129,7 +149,7 @@ ci_docker() {
 }
 
 doctor() {
-  echo "Checking Dockerized toolchain..."
+  echo "Checking local and Dockerized toolchain..."
 
   if command -v docker >/dev/null 2>&1; then
     echo "- docker: OK"
@@ -146,7 +166,11 @@ doctor() {
   echo "- resolved platform: $($ROOT_DIR/scripts/compose.sh --print-platform)"
   echo "- override platform: ANDROBOT_PLATFORM=<linux/arm64|linux/amd64>"
   echo "- gradle: provided by /workspace/scripts/ci-gradle.sh"
-  echo "- adb: provided by ci container"
+  if command -v adb >/dev/null 2>&1; then
+    echo "- adb (host): OK"
+  else
+    echo "- adb (host): MISSING (install: brew install android-platform-tools)"
+  fi
   echo "- default emulator serial: ${ADB_SERIAL}"
 }
 
@@ -158,8 +182,8 @@ Commands:
   doctor        Validate Dockerized toolchain
   build         Build debug APK (Gradle in ci container)
   build-release Build release APK (Gradle in ci container)
-  install       Install debug APK to docker emulator via adb in ci container
-  deploy        Deploy debug APK to real phone via adb TCP (Docker adb)
+  install       Install debug APK to docker emulator via host adb
+  deploy        Deploy debug APK to real phone via host adb TCP
   test-unit     Run JVM unit tests (Gradle in ci container)
   test-device   Run instrumentation tests (adb + Gradle in ci container)
   test          Run unit + instrumentation tests

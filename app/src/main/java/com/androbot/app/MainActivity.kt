@@ -4,10 +4,12 @@ import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
-import android.widget.Button
+import android.view.WindowManager
 import android.widget.EditText
+import android.widget.Button
 import android.widget.TextView
 import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -34,35 +36,59 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupTrustedSenderUi() {
-        val input = findViewById<EditText>(R.id.trustedSenderInput)
         val addButton = findViewById<Button>(R.id.addTrustedSenderButton)
         val removeButton = findViewById<Button>(R.id.removeTrustedSenderButton)
 
-        addButton.setOnClickListener {
-            val raw = input.text.toString()
-            val added = policy.addTrustedSender(raw)
-            if (added) {
-                Toast.makeText(this, "Trusted sender added", Toast.LENGTH_SHORT).show()
-                input.text.clear()
-                renderStatus()
-                renderTrustedSenders()
-            } else {
-                Toast.makeText(this, "Invalid number or already trusted", Toast.LENGTH_SHORT).show()
+        addButton.setOnClickListener { showTrustedSenderDialog(isRemove = false) }
+        removeButton.setOnClickListener { showTrustedSenderDialog(isRemove = true) }
+    }
+
+    private fun showTrustedSenderDialog(isRemove: Boolean) {
+        val input = EditText(this).apply {
+            hint = "+15551234567"
+            inputType = android.text.InputType.TYPE_CLASS_PHONE
+            maxLines = 1
+        }
+
+        val title = if (isRemove) "Remove trusted sender" else "Add trusted sender"
+        val positive = if (isRemove) "Remove" else "Add"
+
+        val dialog = AlertDialog.Builder(this)
+            .setTitle(title)
+            .setView(input)
+            .setPositiveButton(positive, null)
+            .setNegativeButton("Cancel") { d, _ -> d.dismiss() }
+            .setNeutralButton("Close") { d, _ -> d.dismiss() }
+            .create()
+
+        dialog.setOnShowListener {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                val raw = input.text.toString()
+                val changed = if (isRemove) {
+                    policy.removeTrustedSender(raw)
+                } else {
+                    policy.addTrustedSender(raw)
+                }
+
+                if (changed) {
+                    val message = if (isRemove) "Trusted sender removed" else "Trusted sender added"
+                    Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+                    renderStatus()
+                    renderTrustedSenders()
+                    dialog.dismiss()
+                } else {
+                    val message = if (isRemove) {
+                        "Number not found in trusted list"
+                    } else {
+                        "Invalid number or already trusted"
+                    }
+                    Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+                }
             }
         }
 
-        removeButton.setOnClickListener {
-            val raw = input.text.toString()
-            val removed = policy.removeTrustedSender(raw)
-            if (removed) {
-                Toast.makeText(this, "Trusted sender removed", Toast.LENGTH_SHORT).show()
-                input.text.clear()
-                renderStatus()
-                renderTrustedSenders()
-            } else {
-                Toast.makeText(this, "Number not found in trusted list", Toast.LENGTH_SHORT).show()
-            }
-        }
+        dialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
+        dialog.show()
     }
 
     private fun renderStatus() {
