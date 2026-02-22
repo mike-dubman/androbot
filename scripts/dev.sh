@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT_DIR"
 
-APK_PATH="app/build/outputs/apk/debug/app-debug.apk"
+APK_PATH="${APK_PATH:-app/build/outputs/apk/debug/app-debug.apk}"
 ADB_SERIAL="${DEVICE:-emulator:5555}"
 PHONE_IP="${PHONE_IP:-}"
 PHONE_PORT="${PHONE_PORT:-5555}"
@@ -70,7 +70,7 @@ build_release() {
 
 install_apk() {
   if [[ ! -f "$APK_PATH" ]]; then
-    echo "APK not found. Building debug APK first..."
+    echo "APK not found at ${APK_PATH}. Building debug APK first..."
     build
   fi
   ensure_emulator_up
@@ -91,7 +91,7 @@ deploy_phone_tcp() {
   fi
 
   if [[ ! -f "$APK_PATH" ]]; then
-    echo "APK not found. Building debug APK first..."
+    echo "APK not found at ${APK_PATH}. Building debug APK first..."
     build
   fi
 
@@ -166,6 +166,7 @@ Commands:
   ci            Run Docker-based local CI (unit + instrumentation)
 
 Optional env:
+  APK_PATH=<path-to-apk>              Override APK path for install/deploy
   DEVICE=<adb-serial>                Override adb serial (default: emulator:5555)
   PHONE_IP=<phone-lan-ip>            Real phone IP for deploy command
   PHONE_PORT=<port>                  ADB TCP port for deploy (default: 5555)

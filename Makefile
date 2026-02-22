@@ -20,8 +20,8 @@ help:
 	@echo "  make release     - create git tag and GitHub release with APK"
 	@echo "  make release-cli - trigger GitHub release workflow_dispatch via gh"
 	@echo ""
-	@echo "Optional: DEVICE=<adb-serial> make install"
-	@echo "Optional: PHONE_IP=<phone-lan-ip> PHONE_PORT=5555 make deploy"
+	@echo "Optional: APK_PATH=<path-to-apk> DEVICE=<adb-serial> make install"
+	@echo "Optional: APK_PATH=<path-to-apk> PHONE_IP=<phone-lan-ip> PHONE_PORT=5555 make deploy"
 	@echo "Required for release: VERSION=0.2.0 make release"
 	@echo "Required for release-cli: VERSION=0.2.0 [RELEASE_PUBLISH=draft|published] make release-cli"
 
@@ -35,10 +35,10 @@ build-release:
 	@./scripts/dev.sh build-release
 
 install:
-	@DEVICE="$(DEVICE)" ./scripts/dev.sh install
+	@APK_PATH="$(APK_PATH)" DEVICE="$(DEVICE)" ./scripts/dev.sh install
 
 deploy:
-	@PHONE_IP="$(PHONE_IP)" PHONE_PORT="$(PHONE_PORT)" ./scripts/dev.sh deploy
+	@APK_PATH="$(APK_PATH)" PHONE_IP="$(PHONE_IP)" PHONE_PORT="$(PHONE_PORT)" ./scripts/dev.sh deploy
 
 emu-up:
 	@./scripts/compose.sh -f docker-compose.ci.yml up -d emulator
