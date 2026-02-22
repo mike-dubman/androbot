@@ -89,9 +89,16 @@ Build release APK (default):
 make build-release
 ```
 
+Build release AAB (Google Play artifact):
+
+```bash
+make build-bundle
+```
+
 Release APK output:
 
 - `app/build/outputs/apk/release/app-release-unsigned.apk`
+- `app/build/outputs/bundle/release/app-release.aab`
 
 ## Debug Build
 
@@ -265,6 +272,8 @@ CI emulator job also runs SMS integration verification (`.ci/verify-sms-flow.sh`
 
 - installs debug APK
 - configures first trusted sender via debug test receiver
+- sends emulator SMS `volume max` from untrusted sender and verifies no volume change
+- sends invalid command from trusted sender and verifies no volume change
 - sends emulator SMS `volume max`
 - asserts media volume reaches max
 

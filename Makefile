@@ -1,12 +1,13 @@
 SHELL := /bin/bash
 
-.PHONY: help doctor build build-release install deploy emu-up emu-down emu-logs test-unit test-device test ci quick release release-cli release-tag
+.PHONY: help doctor build build-release build-bundle install deploy emu-up emu-down emu-logs test-unit test-device test ci quick release release-cli release-tag
 
 help:
 	@echo "Targets:"
 	@echo "  make doctor      - check required local tools"
 	@echo "  make build       - build debug APK"
 	@echo "  make build-release - build release APK"
+	@echo "  make build-bundle - build release AAB (Play artifact)"
 	@echo "  make install     - install debug APK to emulator via local adb"
 	@echo "  make deploy      - deploy APK to real phone via local adb TCP"
 	@echo "  make emu-up      - start emulator container with web UI (advanced debug)"
@@ -33,6 +34,9 @@ build:
 
 build-release:
 	@./scripts/dev.sh build-release
+
+build-bundle:
+	@./scripts/dev.sh build-bundle
 
 install:
 	@APK_PATH="$(APK_PATH)" DEVICE="$(DEVICE)" ./scripts/dev.sh install
