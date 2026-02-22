@@ -1,7 +1,9 @@
 package com.androbot.app
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.view.WindowManager
@@ -38,9 +40,22 @@ class MainActivity : AppCompatActivity() {
     private fun setupTrustedSenderUi() {
         val addButton = findViewById<Button>(R.id.addTrustedSenderButton)
         val removeButton = findViewById<Button>(R.id.removeTrustedSenderButton)
+        val aboutButton = findViewById<Button>(R.id.aboutButton)
+        val closeButton = findViewById<Button>(R.id.closeTrustedSenderScreenButton)
 
         addButton.setOnClickListener { showTrustedSenderDialog(isRemove = false) }
         removeButton.setOnClickListener { showTrustedSenderDialog(isRemove = true) }
+        aboutButton.setOnClickListener { openProjectLink() }
+        closeButton.setOnClickListener { finish() }
+    }
+
+    private fun openProjectLink() {
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(PROJECT_URL))
+        try {
+            startActivity(intent)
+        } catch (_: Exception) {
+            Toast.makeText(this, "Unable to open project link", Toast.LENGTH_SHORT).show()
+        }
     }
 
     private fun showTrustedSenderDialog(isRemove: Boolean) {
@@ -150,5 +165,9 @@ class MainActivity : AppCompatActivity() {
                 ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.RECEIVE_SMS), 1001)
             }
         }
+    }
+
+    companion object {
+        private const val PROJECT_URL = "https://github.com/mike-dubman/androbot"
     }
 }
