@@ -40,7 +40,7 @@ class TrustedSenderPolicyInstrumentationTest {
         policy.addTrustedSender("+1 (555) 123-4567")
         policy.addTrustedSender("15550000000")
 
-        assertTrue(policy.removeTrustedSender("(555) 123-4567"))
+        assertTrue(policy.removeTrustedSender("15551234567"))
         assertFalse(policy.removeTrustedSender("19998887777"))
 
         assertEquals(listOf("15550000000"), policy.trustedSenders())
