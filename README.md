@@ -1,5 +1,5 @@
 # Androbot
-[![Android CI](https://github.com/mike-dubman/androbot/actions/workflows/android.yml/badge.svg?branch=master)](https://github.com/mike-dubman/androbot/actions/workflows/android.yml)
+[![Android CI](https://github.com/mike-dubman/androbot/actions/workflows/android.yml/badge.svg?branch=main)](https://github.com/mike-dubman/androbot/actions/workflows/android.yml)
 
 Androbot is an Android automation app that listens for incoming SMS and executes a small, explicit set of device actions when messages come from trusted senders.
 
