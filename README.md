@@ -19,6 +19,7 @@ Current scope is intentionally narrow:
   - `volume max`
   - `volume min`
   - `volume <0-100>`
+  - `call me back` (places callback to trusted sender and enables speaker mode)
 - Trusted sender management:
   - Primary: in-app UI (add/remove/list)
   - Optional: SMS commands from a trusted sender (`trusted add/remove/list`)
@@ -240,12 +241,14 @@ Declared in manifest:
 
 - `android.permission.RECEIVE_SMS`
 - `android.permission.MODIFY_AUDIO_SETTINGS`
+- `android.permission.CALL_PHONE`
 
 ### Command format
 
 - `volume max`
 - `volume min`
 - `volume N` where `N` is integer `0..100`
+- `call me back`
 - `trusted add <phone>`
 - `trusted remove <phone>`
 - `trusted list`
@@ -274,8 +277,10 @@ CI emulator job also runs SMS integration verification (`.ci/verify-sms-flow.sh`
 - configures first trusted sender via debug test receiver
 - sends emulator SMS `volume max` from untrusted sender and verifies no volume change
 - sends invalid command from trusted sender and verifies no volume change
+- sends untrusted `call me back` and verifies call path is ignored
 - sends emulator SMS `volume max`
 - asserts media volume reaches max
+- sends trusted `call me back` and verifies callback path is reached
 
 CI emulator job also runs app lifecycle verification (`.ci/verify-app-lifecycle.sh`):
 

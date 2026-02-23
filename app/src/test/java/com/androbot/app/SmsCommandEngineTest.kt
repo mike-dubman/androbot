@@ -17,6 +17,11 @@ class SmsCommandEngineTest {
     }
 
     @Test
+    fun parseCallMeBack() {
+        assertEquals(SmsCommandEngine.Command.CallMeBack, SmsCommandEngine.parseCommand("call me back"))
+    }
+
+    @Test
     fun rejectUnknownCommand() {
         assertNull(SmsCommandEngine.parseCommand("reboot now"))
     }

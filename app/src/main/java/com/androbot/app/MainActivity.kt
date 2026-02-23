@@ -117,6 +117,7 @@ class MainActivity : AppCompatActivity() {
             append("- volume max\n")
             append("- volume min\n")
             append("- volume <0-100>\n\n")
+            append("- call me back (calls trusted sender, enables speaker)\n\n")
             append("Trusted sender management:\n")
             append("- Add/Remove/List via this UI\n")
             append("- Optional SMS management from trusted sender:\n")
@@ -156,13 +157,24 @@ class MainActivity : AppCompatActivity() {
 
     private fun ensureSmsPermission() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            val granted = ContextCompat.checkSelfPermission(
+            val smsGranted = ContextCompat.checkSelfPermission(
                 this,
                 Manifest.permission.RECEIVE_SMS
             ) == PackageManager.PERMISSION_GRANTED
+            val callGranted = ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.CALL_PHONE
+            ) == PackageManager.PERMISSION_GRANTED
 
-            if (!granted) {
-                ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.RECEIVE_SMS), 1001)
+            if (!smsGranted || !callGranted) {
+                ActivityCompat.requestPermissions(
+                    this,
+                    arrayOf(
+                        Manifest.permission.RECEIVE_SMS,
+                        Manifest.permission.CALL_PHONE
+                    ),
+                    1001
+                )
             }
         }
     }

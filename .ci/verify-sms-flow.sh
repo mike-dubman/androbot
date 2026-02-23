@@ -10,7 +10,7 @@ KNOWN_PERCENT="${KNOWN_PERCENT:-0}"
 TEST_RECEIVER="${APP_ID}/.TestControlReceiver"
 
 dump_logs() {
-  adb -s "$SERIAL" logcat -d -s SmsCommandReceiver:I TestControlReceiver:I || true
+  adb -s "$SERIAL" logcat -d -s SmsCommandReceiver:I SmsCommandEngine:I TestControlReceiver:I || true
 }
 
 snapshot_line() {
@@ -49,6 +49,8 @@ adb -s "$SERIAL" install -r "$APK_PATH"
 
 echo "Granting RECEIVE_SMS permission..."
 adb -s "$SERIAL" shell pm grant "$APP_ID" android.permission.RECEIVE_SMS || true
+echo "Granting CALL_PHONE permission..."
+adb -s "$SERIAL" shell pm grant "$APP_ID" android.permission.CALL_PHONE || true
 
 adb -s "$SERIAL" logcat -c
 
@@ -89,22 +91,51 @@ if [[ "$neg2_media_cur" != "$base_media_cur" ]]; then
   exit 1
 fi
 
+echo "Negative test #3: untrusted sender call-back command must be ignored"
+adb -s "$SERIAL" emu sms send "$UNTRUSTED_SENDER" "call me back"
+sleep 2
+if adb -s "$SERIAL" logcat -d -s SmsCommandEngine:I | grep -q "Call me back requested by"; then
+  echo "Negative test failed: untrusted sender reached call-back path."
+  dump_logs
+  exit 1
+fi
+
 echo "Triggering SMS command: volume max"
 adb -s "$SERIAL" emu sms send "$TRUSTED_SENDER" "volume max"
 
 echo "Waiting for SMS execution and volume to reach max..."
+volume_passed="false"
 for _ in $(seq 1 25); do
   AFTER_LINE="$(snapshot_line after)"
   require_snapshot "after" "$AFTER_LINE"
   read -r call_cur call_max ring_cur ring_max media_cur media_max < <(parse_snapshot "$AFTER_LINE")
   echo "After SMS check: call=${call_cur}/${call_max}; ring=${ring_cur}/${ring_max}; media=${media_cur}/${media_max}"
   if [[ "$media_cur" == "$media_max" && "$media_cur" != "$base_media_cur" ]]; then
-    echo "SMS flow verification passed (positive + negative paths)."
-    exit 0
+    volume_passed="true"
+    break
   fi
   sleep 2
 done
 
-echo "SMS flow verification failed: command did not execute or media volume did not transition to max."
+if [[ "$volume_passed" != "true" ]]; then
+  echo "SMS flow verification failed: command did not execute or media volume did not transition to max."
+  dump_logs
+  exit 1
+fi
+
+echo "Triggering trusted call-back command"
+adb -s "$SERIAL" emu sms send "$TRUSTED_SENDER" "call me back"
+for _ in $(seq 1 10); do
+  if adb -s "$SERIAL" logcat -d -s SmsCommandEngine:I | grep -q "Call me back requested by ${TRUSTED_SENDER}"; then
+    echo "Call-back command path verification passed."
+    exit 0
+  fi
+  sleep 1
+done
+
+echo "SMS flow verification passed (positive + negative paths including call-back)."
+exit 0
+
+echo "SMS call-back verification failed: command path not reached."
 dump_logs
 exit 1

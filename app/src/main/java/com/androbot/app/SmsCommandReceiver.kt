@@ -41,7 +41,7 @@ class SmsCommandReceiver : BroadcastReceiver() {
                 return@forEach
             }
 
-            val result = engine.execute(body)
+            val result = engine.execute(body, sender)
             Log.i(TAG, "Command from $sender -> ${result.name}")
         }
     }
