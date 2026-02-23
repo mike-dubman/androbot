@@ -63,12 +63,14 @@ jobs:
 
           DEBUG_ASSET="androbot-debug-${TAG}.apk"
           RELEASE_ASSET="androbot-release-unsigned-${TAG}.apk"
+          RELEASE_LATEST_ASSET="androbot-release-unsigned-latest.apk"
           BUNDLE_ASSET="androbot-release-${TAG}.aab"
 
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           echo "version=$PLAIN" >> "$GITHUB_OUTPUT"
           echo "debug_asset=$DEBUG_ASSET" >> "$GITHUB_OUTPUT"
           echo "release_asset=$RELEASE_ASSET" >> "$GITHUB_OUTPUT"
+          echo "release_latest_asset=$RELEASE_LATEST_ASSET" >> "$GITHUB_OUTPUT"
           echo "bundle_asset=$BUNDLE_ASSET" >> "$GITHUB_OUTPUT"
 
       - name: Build debug/release APKs and release AAB
@@ -86,12 +88,14 @@ jobs:
           TAG: ${{ steps.meta.outputs.tag }}
           DEBUG_ASSET: ${{ steps.meta.outputs.debug_asset }}
           RELEASE_ASSET: ${{ steps.meta.outputs.release_asset }}
+          RELEASE_LATEST_ASSET: ${{ steps.meta.outputs.release_latest_asset }}
           BUNDLE_ASSET: ${{ steps.meta.outputs.bundle_asset }}
           INPUT_NOTES: ${{ inputs.notes }}
         run: |
           set -euo pipefail
           cp app/build/outputs/apk/debug/app-debug.apk "$DEBUG_ASSET"
           cp app/build/outputs/apk/release/app-release-unsigned.apk "$RELEASE_ASSET"
+          cp app/build/outputs/apk/release/app-release-unsigned.apk "$RELEASE_LATEST_ASSET"
           cp app/build/outputs/bundle/release/app-release.aab "$BUNDLE_ASSET"
 
           PREV_TAG="$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || true)"
@@ -103,6 +107,7 @@ jobs:
 
           DEBUG_URL="https://github.com/${REPO}/releases/download/${TAG}/${DEBUG_ASSET}"
           RELEASE_URL="https://github.com/${REPO}/releases/download/${TAG}/${RELEASE_ASSET}"
+          RELEASE_LATEST_URL="https://github.com/${REPO}/releases/latest/download/${RELEASE_LATEST_ASSET}"
           BUNDLE_URL="https://github.com/${REPO}/releases/download/${TAG}/${BUNDLE_ASSET}"
 
           {
@@ -116,6 +121,7 @@ jobs:
             echo
             echo "- Debug APK: ${DEBUG_URL}"
             echo "- Release APK (unsigned): ${RELEASE_URL}"
+            echo "- Release APK (latest alias): ${RELEASE_LATEST_URL}"
             echo "- Release AAB (Play upload): ${BUNDLE_URL}"
             echo
             echo "## Changelog"
@@ -137,4 +143,5 @@ jobs:
           files: |
             ${{ steps.meta.outputs.debug_asset }}
             ${{ steps.meta.outputs.release_asset }}
+            ${{ steps.meta.outputs.release_latest_asset }}
             ${{ steps.meta.outputs.bundle_asset }}
