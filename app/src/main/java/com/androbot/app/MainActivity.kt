@@ -1,11 +1,13 @@
 package com.androbot.app
 
 import android.Manifest
-import android.content.Intent
 import android.content.pm.PackageManager
-import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.text.SpannableString
+import android.text.Spanned
+import android.text.method.LinkMovementMethod
+import android.text.style.URLSpan
 import android.view.WindowManager
 import android.widget.EditText
 import android.widget.Button
@@ -45,17 +47,27 @@ class MainActivity : AppCompatActivity() {
 
         addButton.setOnClickListener { showTrustedSenderDialog(isRemove = false) }
         removeButton.setOnClickListener { showTrustedSenderDialog(isRemove = true) }
-        aboutButton.setOnClickListener { openProjectLink() }
+        aboutButton.setOnClickListener { showAboutDialog() }
         closeButton.setOnClickListener { finish() }
     }
 
-    private fun openProjectLink() {
-        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(PROJECT_URL))
-        try {
-            startActivity(intent)
-        } catch (_: Exception) {
-            Toast.makeText(this, "Unable to open project link", Toast.LENGTH_SHORT).show()
+    private fun showAboutDialog() {
+        val linkText = SpannableString(PROJECT_URL).apply {
+            setSpan(URLSpan(PROJECT_URL), 0, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         }
+
+        val messageView = TextView(this).apply {
+            text = linkText
+            movementMethod = LinkMovementMethod.getInstance()
+            linksClickable = true
+            setPadding(48, 16, 48, 8)
+        }
+
+        AlertDialog.Builder(this)
+            .setTitle("About")
+            .setView(messageView)
+            .setNeutralButton("Close") { d, _ -> d.dismiss() }
+            .show()
     }
 
     private fun showTrustedSenderDialog(isRemove: Boolean) {
@@ -117,6 +129,12 @@ class MainActivity : AppCompatActivity() {
             append("- volume max\n")
             append("- volume min\n")
             append("- volume <0-100>\n\n")
+            append("- wifi reset\n")
+            append("- wifi on\n")
+            append("- wifi off\n\n")
+            append("- data reset\n")
+            append("- data off\n")
+            append("- data on\n\n")
             append("- call me back (calls trusted sender, enables speaker)\n\n")
             append("Trusted sender management:\n")
             append("- Add/Remove/List via this UI\n")

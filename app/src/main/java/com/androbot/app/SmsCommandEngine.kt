@@ -7,12 +7,15 @@ import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.Build
 import android.telecom.TelecomManager
 import android.telephony.PhoneNumberUtils
 import android.util.Log
 import androidx.core.content.ContextCompat
 import android.Manifest
 import android.content.pm.PackageManager
+import android.net.wifi.WifiManager
+import java.util.concurrent.TimeUnit
 import kotlin.math.roundToInt
 
 class SmsCommandEngine(private val context: Context) {
@@ -64,6 +67,13 @@ class SmsCommandEngine(private val context: Context) {
                     executed = placeCallMeBack(target, audioManager)
                 }
             }
+
+            is Command.WifiReset -> executed = resetWifi()
+            is Command.WifiOn -> executed = setWifiEnabled(true)
+            is Command.WifiOff -> executed = setWifiEnabled(false)
+            is Command.DataReset -> executed = resetMobileData()
+            is Command.DataOn -> executed = setMobileDataEnabled(true)
+            is Command.DataOff -> executed = setMobileDataEnabled(false)
         }
 
         return if (executed) Result.EXECUTED else Result.IGNORED
@@ -74,6 +84,12 @@ class SmsCommandEngine(private val context: Context) {
         data object VolumeMin : Command
         data class VolumePercent(val percent: Int) : Command
         data object CallMeBack : Command
+        data object WifiReset : Command
+        data object WifiOn : Command
+        data object WifiOff : Command
+        data object DataReset : Command
+        data object DataOn : Command
+        data object DataOff : Command
     }
 
     private fun safeSetVolume(audioManager: AudioManager, stream: Int, value: Int) {
@@ -150,6 +166,73 @@ class SmsCommandEngine(private val context: Context) {
         ContextCompat.checkSelfPermission(context, Manifest.permission.CALL_PHONE) ==
             PackageManager.PERMISSION_GRANTED
 
+    private fun resetWifi(): Boolean {
+        val disabled = setWifiEnabled(false)
+        val enabled = setWifiEnabled(true)
+        return disabled && enabled
+    }
+
+    private fun resetMobileData(): Boolean {
+        val disabled = setMobileDataEnabled(false)
+        val enabled = setMobileDataEnabled(true)
+        return disabled && enabled
+    }
+
+    private fun setWifiEnabled(enabled: Boolean): Boolean {
+        val label = if (enabled) "on" else "off"
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q &&
+            ContextCompat.checkSelfPermission(context, Manifest.permission.CHANGE_WIFI_STATE) ==
+            PackageManager.PERMISSION_GRANTED
+        ) {
+            try {
+                val wifi = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
+                val success = wifi.setWifiEnabled(enabled)
+                if (success) {
+                    Log.i(TAG, "Wi-Fi set $label via WifiManager")
+                    return true
+                }
+            } catch (e: SecurityException) {
+                Log.i(TAG, "Wi-Fi set $label blocked via WifiManager")
+            } catch (e: Exception) {
+                Log.i(TAG, "Wi-Fi set $label failed via WifiManager: ${e.javaClass.simpleName}")
+            }
+        }
+
+        val svcArg = if (enabled) "enable" else "disable"
+        return runShellCommand("svc wifi $svcArg", "Wi-Fi set $label")
+    }
+
+    private fun setMobileDataEnabled(enabled: Boolean): Boolean {
+        val svcArg = if (enabled) "enable" else "disable"
+        return runShellCommand("svc data $svcArg", "mobile data set ${if (enabled) "on" else "off"}")
+    }
+
+    private fun runShellCommand(command: String, operation: String): Boolean {
+        return try {
+            val process = Runtime.getRuntime().exec(arrayOf("sh", "-c", command))
+            val finished = process.waitFor(5, TimeUnit.SECONDS)
+            if (!finished) {
+                process.destroy()
+                Log.i(TAG, "$operation timed out: '$command'")
+                false
+            } else {
+                val success = process.exitValue() == 0
+                if (!success) {
+                    Log.i(TAG, "$operation failed with exit=${process.exitValue()}: '$command'")
+                } else {
+                    Log.i(TAG, "$operation succeeded: '$command'")
+                }
+                success
+            }
+        } catch (e: SecurityException) {
+            Log.i(TAG, "$operation blocked by security policy")
+            false
+        } catch (e: Exception) {
+            Log.i(TAG, "$operation failed: ${e.javaClass.simpleName}")
+            false
+        }
+    }
+
     companion object {
         private const val TAG = "SmsCommandEngine"
         private val PERCENT_REGEX = Regex("^volume\\s+(\\d{1,3})$")
@@ -166,6 +249,24 @@ class SmsCommandEngine(private val context: Context) {
             }
             if (normalized == "call me back") {
                 return Command.CallMeBack
+            }
+            if (normalized == "wifi reset") {
+                return Command.WifiReset
+            }
+            if (normalized == "wifi on") {
+                return Command.WifiOn
+            }
+            if (normalized == "wifi off") {
+                return Command.WifiOff
+            }
+            if (normalized == "data reset") {
+                return Command.DataReset
+            }
+            if (normalized == "data on") {
+                return Command.DataOn
+            }
+            if (normalized == "data off") {
+                return Command.DataOff
             }
 
             val match = PERCENT_REGEX.matchEntire(normalized) ?: return null

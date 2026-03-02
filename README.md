@@ -19,11 +19,18 @@ Current scope is intentionally narrow:
   - `volume max`
   - `volume min`
   - `volume <0-100>`
+  - `wifi reset`
+  - `wifi on`
+  - `wifi off`
+  - `data reset`
+  - `data off`
+  - `data on`
   - `call me back` (places callback to trusted sender and enables speaker mode)
 - Trusted sender management:
   - Primary: in-app UI (add/remove/list)
   - Optional: SMS commands from a trusted sender (`trusted add/remove/list`)
 - Action target: call, ring, and media stream volume.
+- Network toggles are best-effort and may be ignored by modern Android security policies.
 
 ## Quick Start
 
@@ -146,12 +153,19 @@ Declared in manifest:
 - `android.permission.RECEIVE_SMS`
 - `android.permission.MODIFY_AUDIO_SETTINGS`
 - `android.permission.CALL_PHONE`
+- `android.permission.CHANGE_WIFI_STATE`
 
 ### Command format
 
 - `volume max`
 - `volume min`
 - `volume N` where `N` is integer `0..100`
+- `wifi reset`
+- `wifi on`
+- `wifi off`
+- `data reset`
+- `data off`
+- `data on`
 - `call me back`
 - `trusted add <phone>`
 - `trusted remove <phone>`
