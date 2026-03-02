@@ -128,14 +128,29 @@ adb -s "$SERIAL" emu sms send "$TRUSTED_SENDER" "call me back"
 for _ in $(seq 1 10); do
   if adb -s "$SERIAL" logcat -d -s SmsCommandEngine:I | grep -q "Call me back requested by ${TRUSTED_SENDER}"; then
     echo "Call-back command path verification passed."
+    break
+  fi
+  sleep 1
+done
+
+if ! adb -s "$SERIAL" logcat -d -s SmsCommandEngine:I | grep -q "Call me back requested by ${TRUSTED_SENDER}"; then
+  echo "SMS call-back verification failed: command path not reached."
+  dump_logs
+  exit 1
+fi
+
+echo "Triggering trusted Wi-Fi command route check (wifi on)"
+adb -s "$SERIAL" logcat -c
+adb -s "$SERIAL" emu sms send "$TRUSTED_SENDER" "wifi on"
+for _ in $(seq 1 12); do
+  if adb -s "$SERIAL" logcat -d -s SmsCommandReceiver:I | grep -Eq "Command from ${TRUSTED_SENDER} -> (EXECUTED|IGNORED)"; then
+    echo "Wi-Fi command route verification passed."
+    echo "SMS flow verification passed (positive + negative paths including call-back and wifi command route)."
     exit 0
   fi
   sleep 1
 done
 
-echo "SMS flow verification passed (positive + negative paths including call-back)."
-exit 0
-
-echo "SMS call-back verification failed: command path not reached."
+echo "SMS wifi command route verification failed: receiver result log not found."
 dump_logs
 exit 1
