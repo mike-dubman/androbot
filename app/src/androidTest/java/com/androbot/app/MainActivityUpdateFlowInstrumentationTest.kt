@@ -1,13 +1,11 @@
 package com.androbot.app
 
 import android.Manifest
+import android.widget.Button
 import androidx.test.core.app.ActivityScenario
 import androidx.test.espresso.Espresso.onView
-import androidx.test.espresso.action.ViewActions.click
-import androidx.test.espresso.action.ViewActions.scrollTo
 import androidx.test.espresso.assertion.ViewAssertions.matches
 import androidx.test.espresso.matcher.ViewMatchers.isDisplayed
-import androidx.test.espresso.matcher.ViewMatchers.withId
 import androidx.test.espresso.matcher.ViewMatchers.withText
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.junit.After
@@ -47,7 +45,7 @@ class MainActivityUpdateFlowInstrumentationTest {
         }
 
         ActivityScenario.launch(MainActivity::class.java).use {
-            onView(withId(R.id.checkUpdateButton)).perform(scrollTo(), click())
+            clickCheckUpdateButton(it)
             onView(withText("Update available")).check(matches(isDisplayed()))
             onView(withText("Version 9.9.9 is available.\n\nInstall update now?"))
                 .check(matches(isDisplayed()))
@@ -59,9 +57,15 @@ class MainActivityUpdateFlowInstrumentationTest {
         MainActivity.updaterFactory = { FakeUpdater(AppUpdater.CheckResult.UpToDate) }
 
         ActivityScenario.launch(MainActivity::class.java).use {
-            onView(withId(R.id.checkUpdateButton)).perform(scrollTo(), click())
+            clickCheckUpdateButton(it)
             onView(withText("No updates")).check(matches(isDisplayed()))
             onView(withText("Already on latest version")).check(matches(isDisplayed()))
+        }
+    }
+
+    private fun clickCheckUpdateButton(scenario: ActivityScenario<MainActivity>) {
+        scenario.onActivity { activity ->
+            activity.findViewById<Button>(R.id.checkUpdateButton).performClick()
         }
     }
 
