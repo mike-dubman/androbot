@@ -4,6 +4,7 @@ import android.Manifest
 import androidx.test.core.app.ActivityScenario
 import androidx.test.espresso.Espresso.onView
 import androidx.test.espresso.action.ViewActions.click
+import androidx.test.espresso.action.ViewActions.scrollTo
 import androidx.test.espresso.assertion.ViewAssertions.matches
 import androidx.test.espresso.matcher.ViewMatchers.isDisplayed
 import androidx.test.espresso.matcher.ViewMatchers.withId
@@ -46,7 +47,7 @@ class MainActivityUpdateFlowInstrumentationTest {
         }
 
         ActivityScenario.launch(MainActivity::class.java).use {
-            onView(withId(R.id.checkUpdateButton)).perform(click())
+            onView(withId(R.id.checkUpdateButton)).perform(scrollTo(), click())
             onView(withText("Update available")).check(matches(isDisplayed()))
             onView(withText("Version 9.9.9 is available.\n\nInstall update now?"))
                 .check(matches(isDisplayed()))
@@ -58,7 +59,7 @@ class MainActivityUpdateFlowInstrumentationTest {
         MainActivity.updaterFactory = { FakeUpdater(AppUpdater.CheckResult.UpToDate) }
 
         ActivityScenario.launch(MainActivity::class.java).use {
-            onView(withId(R.id.checkUpdateButton)).perform(click())
+            onView(withId(R.id.checkUpdateButton)).perform(scrollTo(), click())
             onView(withText("No updates")).check(matches(isDisplayed()))
             onView(withText("Already on latest version")).check(matches(isDisplayed()))
         }
