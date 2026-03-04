@@ -21,12 +21,14 @@ import androidx.core.content.ContextCompat
 class MainActivity : AppCompatActivity() {
 
     private lateinit var policy: TrustedSenderPolicy
+    private lateinit var updater: AppUpdater
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
         policy = TrustedSenderPolicy(this)
+        updater = AppUpdater(this)
         ensureSmsPermission()
         setupTrustedSenderUi()
         renderStatus()
@@ -39,16 +41,57 @@ class MainActivity : AppCompatActivity() {
         renderTrustedSenders()
     }
 
+    override fun onDestroy() {
+        updater.cleanup()
+        super.onDestroy()
+    }
+
     private fun setupTrustedSenderUi() {
         val addButton = findViewById<Button>(R.id.addTrustedSenderButton)
         val removeButton = findViewById<Button>(R.id.removeTrustedSenderButton)
         val aboutButton = findViewById<Button>(R.id.aboutButton)
+        val checkUpdateButton = findViewById<Button>(R.id.checkUpdateButton)
         val closeButton = findViewById<Button>(R.id.closeTrustedSenderScreenButton)
 
         addButton.setOnClickListener { showTrustedSenderDialog(isRemove = false) }
         removeButton.setOnClickListener { showTrustedSenderDialog(isRemove = true) }
         aboutButton.setOnClickListener { showAboutDialog() }
+        checkUpdateButton.setOnClickListener { checkForUpdates() }
         closeButton.setOnClickListener { finish() }
+    }
+
+    private fun checkForUpdates() {
+        Toast.makeText(this, "Checking for updates...", Toast.LENGTH_SHORT).show()
+        updater.checkForUpdate { result ->
+            when (result) {
+                is AppUpdater.CheckResult.UpToDate ->
+                    Toast.makeText(this, "Already on latest version", Toast.LENGTH_SHORT).show()
+
+                is AppUpdater.CheckResult.Error ->
+                    Toast.makeText(this, result.message, Toast.LENGTH_SHORT).show()
+
+                is AppUpdater.CheckResult.UpdateAvailable -> showUpdateAvailableDialog(result.metadata)
+            }
+        }
+    }
+
+    private fun showUpdateAvailableDialog(metadata: AppUpdater.UpdateMetadata) {
+        val msg = buildString {
+            append("Version ")
+            append(metadata.versionName)
+            append(" is available.\n\n")
+            append("Install update now?")
+        }
+        AlertDialog.Builder(this)
+            .setTitle("Update available")
+            .setMessage(msg)
+            .setPositiveButton("Download") { _, _ ->
+                updater.downloadAndInstall(metadata) { status ->
+                    Toast.makeText(this, status, Toast.LENGTH_LONG).show()
+                }
+            }
+            .setNegativeButton("Later", null)
+            .show()
     }
 
     private fun showAboutDialog() {
