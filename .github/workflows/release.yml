@@ -75,6 +75,8 @@ jobs:
           RELEASE_ASSET="androbot-release-${TAG}.apk"
           RELEASE_LATEST_ASSET="androbot-release-latest.apk"
           BUNDLE_ASSET="androbot-release-${TAG}.aab"
+          RELEASE_SHA_ASSET="androbot-release-${TAG}.apk.sha256"
+          UPDATE_ASSET="androbot-update.json"
 
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           echo "version=$PLAIN" >> "$GITHUB_OUTPUT"
@@ -82,6 +84,8 @@ jobs:
           echo "release_asset=$RELEASE_ASSET" >> "$GITHUB_OUTPUT"
           echo "release_latest_asset=$RELEASE_LATEST_ASSET" >> "$GITHUB_OUTPUT"
           echo "bundle_asset=$BUNDLE_ASSET" >> "$GITHUB_OUTPUT"
+          echo "release_sha_asset=$RELEASE_SHA_ASSET" >> "$GITHUB_OUTPUT"
+          echo "update_asset=$UPDATE_ASSET" >> "$GITHUB_OUTPUT"
 
       - name: Build debug/release APKs and release AAB
         run: |
@@ -95,6 +99,8 @@ jobs:
           RELEASE_ASSET: ${{ steps.meta.outputs.release_asset }}
           RELEASE_LATEST_ASSET: ${{ steps.meta.outputs.release_latest_asset }}
           BUNDLE_ASSET: ${{ steps.meta.outputs.bundle_asset }}
+          RELEASE_SHA_ASSET: ${{ steps.meta.outputs.release_sha_asset }}
+          UPDATE_ASSET: ${{ steps.meta.outputs.update_asset }}
           INPUT_NOTES: ${{ inputs.notes }}
         run: |
           set -euo pipefail
@@ -110,6 +116,8 @@ jobs:
           cp "$SIGNED_APK_PATH" "$RELEASE_ASSET"
           cp "$SIGNED_APK_PATH" "$RELEASE_LATEST_ASSET"
           cp app/build/outputs/bundle/release/app-release.aab "$BUNDLE_ASSET"
+          RELEASE_SHA256="$(sha256sum "$RELEASE_ASSET" | awk '{print $1}')"
+          echo "$RELEASE_SHA256  $RELEASE_ASSET" > "$RELEASE_SHA_ASSET"
 
           PREV_TAG="$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || true)"
           if [[ -n "$PREV_TAG" ]]; then
@@ -122,6 +130,23 @@ jobs:
           RELEASE_URL="https://github.com/${REPO}/releases/download/${TAG}/${RELEASE_ASSET}"
           RELEASE_LATEST_URL="https://github.com/${REPO}/releases/latest/download/${RELEASE_LATEST_ASSET}"
           BUNDLE_URL="https://github.com/${REPO}/releases/download/${TAG}/${BUNDLE_ASSET}"
+          UPDATE_URL="https://github.com/${REPO}/releases/latest/download/${UPDATE_ASSET}"
+          VERSION_CODE="$(sed -nE 's/^[[:space:]]*versionCode[[:space:]]*=[[:space:]]*([0-9]+).*/\1/p' app/build.gradle.kts | head -n1)"
+
+          if [[ -z "$VERSION_CODE" ]]; then
+            echo "Failed to parse versionCode from app/build.gradle.kts"
+            exit 1
+          fi
+
+          cat > "$UPDATE_ASSET" <<JSON
+          {
+            "versionCode": ${VERSION_CODE},
+            "versionName": "${{ steps.meta.outputs.version }}",
+            "apkUrl": "${RELEASE_URL}",
+            "sha256": "${RELEASE_SHA256}",
+            "minSupportedVersionCode": 1
+          }
+          JSON
 
           {
             echo "# Androbot ${TAG}"
@@ -135,6 +160,7 @@ jobs:
             echo "- Debug APK: ${DEBUG_URL}"
             echo "- Release APK (signed): ${RELEASE_URL}"
             echo "- Release APK (latest alias): ${RELEASE_LATEST_URL}"
+            echo "- OTA metadata: ${UPDATE_URL}"
             echo "- Release AAB (Play upload): ${BUNDLE_URL}"
             echo
             echo "## Changelog"
@@ -157,4 +183,6 @@ jobs:
             ${{ steps.meta.outputs.debug_asset }}
             ${{ steps.meta.outputs.release_asset }}
             ${{ steps.meta.outputs.release_latest_asset }}
+            ${{ steps.meta.outputs.release_sha_asset }}
+            ${{ steps.meta.outputs.update_asset }}
             ${{ steps.meta.outputs.bundle_asset }}

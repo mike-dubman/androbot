@@ -26,6 +26,7 @@ Workflow behavior:
 - attaches APK/AAB assets
 - writes release body with changelog and direct download links
 - requires signing secrets and publishes a signed release APK
+- publishes OTA metadata (`androbot-update.json`) and APK checksum
 
 ## Build Play artifact locally
 
@@ -86,7 +87,13 @@ Published release assets include:
 - `androbot-debug-v<version>.apk`
 - `androbot-release-v<version>.apk` (signed)
 - `androbot-release-latest.apk` (signed latest alias)
+- `androbot-release-v<version>.apk.sha256`
+- `androbot-update.json` (OTA metadata for in-app updater)
 - `androbot-release-v<version>.aab`
+
+OTA metadata URL used by app updater:
+
+- `https://github.com/mike-dubman/androbot/releases/latest/download/androbot-update.json`
 
 ## Google Play Console checklist
 

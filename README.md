@@ -56,14 +56,14 @@ Download the latest release APK asset from:
 
 Recommended asset names:
 
-- `androbot-release-unsigned-v<version>.apk`
-- `androbot-release-unsigned-latest.apk` (stable alias)
+- `androbot-release-v<version>.apk`
+- `androbot-release-latest.apk` (stable alias)
 
 `curl` (auto-download latest release APK):
 
 ```bash
-curl -fL -o androbot-release-unsigned-latest.apk \
-  https://github.com/mike-dubman/androbot/releases/latest/download/androbot-release-unsigned-latest.apk
+curl -fL -o androbot-release-latest.apk \
+  https://github.com/mike-dubman/androbot/releases/latest/download/androbot-release-latest.apk
 ```
 
 ### 3. Connect and verify phone
@@ -79,7 +79,7 @@ Accept the RSA fingerprint prompt on phone if shown.
 ### 4. Install APK
 
 ```bash
-adb install -r androbot-release-unsigned-latest.apk
+adb install -r androbot-release-latest.apk
 ```
 
 ### 5. First app setup on phone
@@ -101,14 +101,22 @@ After first USB connection:
 ```bash
 adb tcpip 5555
 adb connect <PHONE_IP>:5555
-adb install -r androbot-release-unsigned-latest.apk
+adb install -r androbot-release-latest.apk
 ```
 
 Then you can deploy using local adb:
 
 ```bash
-adb install -r androbot-release-unsigned-latest.apk
+adb install -r androbot-release-latest.apk
 ```
+
+## In-App Upgrade (OTA)
+
+- Tap `Check update` in app UI.
+- App fetches metadata from:
+  - `https://github.com/mike-dubman/androbot/releases/latest/download/androbot-update.json`
+- App downloads release APK, verifies SHA-256 checksum, then launches installer for in-place upgrade.
+- On Android 8+, allow `Install unknown apps` for Androbot when prompted.
 
 ### How to find phone IP
 
@@ -154,6 +162,8 @@ Declared in manifest:
 - `android.permission.MODIFY_AUDIO_SETTINGS`
 - `android.permission.CALL_PHONE`
 - `android.permission.CHANGE_WIFI_STATE`
+- `android.permission.INTERNET`
+- `android.permission.REQUEST_INSTALL_PACKAGES`
 
 ### Command format
 

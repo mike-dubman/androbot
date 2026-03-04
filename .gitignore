@@ -8,3 +8,4 @@
 .cxx/
 *.iml
 app/build/
+.secrets/
