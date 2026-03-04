@@ -21,14 +21,14 @@ import androidx.core.content.ContextCompat
 class MainActivity : AppCompatActivity() {
 
     private lateinit var policy: TrustedSenderPolicy
-    private lateinit var updater: AppUpdater
+    private lateinit var updater: Updater
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
         policy = TrustedSenderPolicy(this)
-        updater = AppUpdater(this)
+        updater = updaterFactory(this)
         ensureSmsPermission()
         setupTrustedSenderUi()
         renderStatus()
@@ -65,10 +65,18 @@ class MainActivity : AppCompatActivity() {
         updater.checkForUpdate { result ->
             when (result) {
                 is AppUpdater.CheckResult.UpToDate ->
-                    Toast.makeText(this, "Already on latest version", Toast.LENGTH_SHORT).show()
+                    AlertDialog.Builder(this)
+                        .setTitle("No updates")
+                        .setMessage("Already on latest version")
+                        .setPositiveButton("OK", null)
+                        .show()
 
                 is AppUpdater.CheckResult.Error ->
-                    Toast.makeText(this, result.message, Toast.LENGTH_SHORT).show()
+                    AlertDialog.Builder(this)
+                        .setTitle("Update check failed")
+                        .setMessage(result.message)
+                        .setPositiveButton("OK", null)
+                        .show()
 
                 is AppUpdater.CheckResult.UpdateAvailable -> showUpdateAvailableDialog(result.metadata)
             }
@@ -242,5 +250,7 @@ class MainActivity : AppCompatActivity() {
 
     companion object {
         private const val PROJECT_URL = "https://github.com/mike-dubman/androbot"
+        @Volatile
+        var updaterFactory: (AppCompatActivity) -> Updater = { activity -> AppUpdater(activity) }
     }
 }

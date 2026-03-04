@@ -20,7 +20,13 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.security.MessageDigest
 
-class AppUpdater(private val activity: Activity) {
+interface Updater {
+    fun checkForUpdate(onResult: (AppUpdater.CheckResult) -> Unit)
+    fun downloadAndInstall(metadata: AppUpdater.UpdateMetadata, onStatus: (String) -> Unit)
+    fun cleanup()
+}
+
+class AppUpdater(private val activity: Activity) : Updater {
 
     sealed interface CheckResult {
         data class UpdateAvailable(val metadata: UpdateMetadata) : CheckResult
@@ -41,7 +47,7 @@ class AppUpdater(private val activity: Activity) {
     private var activeDownloadId: Long? = null
     private var downloadReceiver: BroadcastReceiver? = null
 
-    fun checkForUpdate(onResult: (CheckResult) -> Unit) {
+    override fun checkForUpdate(onResult: (CheckResult) -> Unit) {
         Thread {
             val result = try {
                 val metadata = fetchMetadata()
@@ -63,7 +69,7 @@ class AppUpdater(private val activity: Activity) {
         }.start()
     }
 
-    fun downloadAndInstall(metadata: UpdateMetadata, onStatus: (String) -> Unit) {
+    override fun downloadAndInstall(metadata: UpdateMetadata, onStatus: (String) -> Unit) {
         if (activeDownloadId != null) {
             onStatus("Update download is already in progress")
             return
@@ -142,7 +148,7 @@ class AppUpdater(private val activity: Activity) {
         )
     }
 
-    fun cleanup() {
+    override fun cleanup() {
         cleanupReceiver()
         activeDownloadId = null
     }
