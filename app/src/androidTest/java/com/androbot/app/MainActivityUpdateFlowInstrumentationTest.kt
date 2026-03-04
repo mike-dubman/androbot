@@ -1,13 +1,18 @@
 package com.androbot.app
 
 import android.Manifest
-import android.widget.Button
+import android.view.View
 import androidx.test.core.app.ActivityScenario
 import androidx.test.espresso.Espresso.onView
+import androidx.test.espresso.UiController
+import androidx.test.espresso.ViewAction
 import androidx.test.espresso.assertion.ViewAssertions.matches
+import androidx.test.espresso.matcher.ViewMatchers.isAssignableFrom
 import androidx.test.espresso.matcher.ViewMatchers.isDisplayed
+import androidx.test.espresso.matcher.ViewMatchers.withId
 import androidx.test.espresso.matcher.ViewMatchers.withText
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import org.hamcrest.Matcher
 import org.junit.After
 import org.junit.Rule
 import org.junit.Test
@@ -45,7 +50,7 @@ class MainActivityUpdateFlowInstrumentationTest {
         }
 
         ActivityScenario.launch(MainActivity::class.java).use {
-            clickCheckUpdateButton(it)
+            onView(withId(R.id.checkUpdateButton)).perform(forceClick())
             onView(withText("Update available")).check(matches(isDisplayed()))
             onView(withText("Version 9.9.9 is available.\n\nInstall update now?"))
                 .check(matches(isDisplayed()))
@@ -57,15 +62,22 @@ class MainActivityUpdateFlowInstrumentationTest {
         MainActivity.updaterFactory = { FakeUpdater(AppUpdater.CheckResult.UpToDate) }
 
         ActivityScenario.launch(MainActivity::class.java).use {
-            clickCheckUpdateButton(it)
+            onView(withId(R.id.checkUpdateButton)).perform(forceClick())
             onView(withText("No updates")).check(matches(isDisplayed()))
             onView(withText("Already on latest version")).check(matches(isDisplayed()))
         }
     }
 
-    private fun clickCheckUpdateButton(scenario: ActivityScenario<MainActivity>) {
-        scenario.onActivity { activity ->
-            activity.findViewById<Button>(R.id.checkUpdateButton).performClick()
+    private fun forceClick(): ViewAction {
+        return object : ViewAction {
+            override fun getConstraints(): Matcher<View> = isAssignableFrom(View::class.java)
+
+            override fun getDescription(): String = "force click via view.performClick()"
+
+            override fun perform(uiController: UiController, view: View) {
+                view.performClick()
+                uiController.loopMainThreadUntilIdle()
+            }
         }
     }
 
