@@ -26,6 +26,12 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
+    environment: production
+    env:
+      ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+      ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+      ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+      ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -38,15 +44,19 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
-      - name: Prepare optional signing keystore
-        env:
-          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+      - name: Validate signing secrets and prepare keystore
         run: |
           set -euo pipefail
-          if [[ -n "${ANDROID_KEYSTORE_BASE64}" ]]; then
-            echo "${ANDROID_KEYSTORE_BASE64}" | base64 --decode > "$RUNNER_TEMP/androbot-upload-keystore.jks"
-            echo "ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/androbot-upload-keystore.jks" >> "$GITHUB_ENV"
-          fi
+          required_vars=(ANDROID_KEYSTORE_BASE64 ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_ALIAS ANDROID_KEY_PASSWORD)
+          for var_name in "${required_vars[@]}"; do
+            if [[ -z "${!var_name:-}" ]]; then
+              echo "Missing required secret: ${var_name}"
+              exit 1
+            fi
+          done
+
+          echo "${ANDROID_KEYSTORE_BASE64}" | base64 --decode > "$RUNNER_TEMP/androbot-upload-keystore.jks"
+          echo "ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/androbot-upload-keystore.jks" >> "$GITHUB_ENV"
 
       - name: Normalize release metadata
         id: meta
@@ -62,8 +72,8 @@ jobs:
           fi
 
           DEBUG_ASSET="androbot-debug-${TAG}.apk"
-          RELEASE_ASSET="androbot-release-unsigned-${TAG}.apk"
-          RELEASE_LATEST_ASSET="androbot-release-unsigned-latest.apk"
+          RELEASE_ASSET="androbot-release-${TAG}.apk"
+          RELEASE_LATEST_ASSET="androbot-release-latest.apk"
           BUNDLE_ASSET="androbot-release-${TAG}.aab"
 
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
@@ -74,11 +84,6 @@ jobs:
           echo "bundle_asset=$BUNDLE_ASSET" >> "$GITHUB_OUTPUT"
 
       - name: Build debug/release APKs and release AAB
-        env:
-          ANDROID_KEYSTORE_PATH: ${{ env.ANDROID_KEYSTORE_PATH }}
-          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           ./gradlew --no-daemon assembleDebug assembleRelease bundleRelease
 
@@ -93,9 +98,17 @@ jobs:
           INPUT_NOTES: ${{ inputs.notes }}
         run: |
           set -euo pipefail
+          SIGNED_APK_PATH="app/build/outputs/apk/release/app-release.apk"
+          if [[ ! -f "$SIGNED_APK_PATH" ]]; then
+            echo "Signed APK not found at $SIGNED_APK_PATH"
+            echo "Release APK output directory contents:"
+            ls -la app/build/outputs/apk/release || true
+            exit 1
+          fi
+
           cp app/build/outputs/apk/debug/app-debug.apk "$DEBUG_ASSET"
-          cp app/build/outputs/apk/release/app-release-unsigned.apk "$RELEASE_ASSET"
-          cp app/build/outputs/apk/release/app-release-unsigned.apk "$RELEASE_LATEST_ASSET"
+          cp "$SIGNED_APK_PATH" "$RELEASE_ASSET"
+          cp "$SIGNED_APK_PATH" "$RELEASE_LATEST_ASSET"
           cp app/build/outputs/bundle/release/app-release.aab "$BUNDLE_ASSET"
 
           PREV_TAG="$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || true)"
@@ -120,7 +133,7 @@ jobs:
             echo "## Download"
             echo
             echo "- Debug APK: ${DEBUG_URL}"
-            echo "- Release APK (unsigned): ${RELEASE_URL}"
+            echo "- Release APK (signed): ${RELEASE_URL}"
             echo "- Release APK (latest alias): ${RELEASE_LATEST_URL}"
             echo "- Release AAB (Play upload): ${BUNDLE_URL}"
             echo
