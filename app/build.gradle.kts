@@ -7,6 +7,8 @@ android {
     namespace = "com.androbot.app"
     compileSdk = 35
 
+    val versionCodeOverride = System.getenv("ANDROBOT_VERSION_CODE_OVERRIDE")?.toIntOrNull()
+    val versionNameOverride = System.getenv("ANDROBOT_VERSION_NAME_OVERRIDE")
     val keystorePath = System.getenv("ANDROID_KEYSTORE_PATH")
     val keystorePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD")
     val signingKeyAlias = System.getenv("ANDROID_KEY_ALIAS")
@@ -21,8 +23,8 @@ android {
         applicationId = "com.androbot.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 5
-        versionName = "0.2.3"
+        versionCode = versionCodeOverride ?: 5
+        versionName = if (!versionNameOverride.isNullOrBlank()) versionNameOverride else "0.2.3"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
