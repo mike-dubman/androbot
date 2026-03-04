@@ -29,7 +29,9 @@ class MainActivity : AppCompatActivity() {
 
         policy = TrustedSenderPolicy(this)
         updater = updaterFactory(this)
-        ensureSmsPermission()
+        if (!skipPermissionRequestForTests) {
+            ensureSmsPermission()
+        }
         setupTrustedSenderUi()
         renderStatus()
         renderTrustedSenders()
@@ -252,5 +254,7 @@ class MainActivity : AppCompatActivity() {
         private const val PROJECT_URL = "https://github.com/mike-dubman/androbot"
         @Volatile
         var updaterFactory: (AppCompatActivity) -> Updater = { activity -> AppUpdater(activity) }
+        @Volatile
+        var skipPermissionRequestForTests: Boolean = false
     }
 }
