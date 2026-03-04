@@ -25,6 +25,7 @@ Workflow behavior:
 - creates GitHub release (published by default, draft optional)
 - attaches APK/AAB assets
 - writes release body with changelog and direct download links
+- requires signing secrets and publishes a signed release APK
 
 ## Build Play artifact locally
 
@@ -52,22 +53,40 @@ make build-bundle
 
 If signing env vars are not set, the AAB is still built but not signed for Play upload.
 
-## GitHub release workflow signing setup (optional)
+## GitHub release workflow signing setup (required)
 
-To make release workflow produce signed artifacts, add repository secrets:
+Configure a protected GitHub Actions environment named `production`, then add these
+environment secrets:
 
 - `ANDROID_KEYSTORE_BASE64`: base64 of your `.jks` upload keystore
 - `ANDROID_KEYSTORE_PASSWORD`
 - `ANDROID_KEY_ALIAS`
 - `ANDROID_KEY_PASSWORD`
 
-Generate base64:
+Generate keystore + all secret values with Docker (recommended):
 
 ```bash
-base64 -i upload-key.jks | tr -d '\n'
+KEYSTORE_PASSWORD='***' KEY_PASSWORD='***' ./scripts/setup-signing-secrets.sh > .secrets/github-production-secrets.txt
 ```
 
-Without these secrets, workflow still publishes unsigned APK/AAB assets.
+Apply generated values to GitHub environment secrets (`production`):
+
+```bash
+eval "$(sed -nE 's/^[[:space:]]*(ANDROID_[A-Z_]+)=(.*)$/\1='\''\2'\''/p' .secrets/github-production-secrets.txt)"
+
+gh secret set ANDROID_KEYSTORE_BASE64 --env production --body "$ANDROID_KEYSTORE_BASE64"
+gh secret set ANDROID_KEYSTORE_PASSWORD --env production --body "$ANDROID_KEYSTORE_PASSWORD"
+gh secret set ANDROID_KEY_ALIAS --env production --body "$ANDROID_KEY_ALIAS"
+gh secret set ANDROID_KEY_PASSWORD --env production --body "$ANDROID_KEY_PASSWORD"
+```
+
+The release workflow now fails fast if any of these secrets are missing.
+Published release assets include:
+
+- `androbot-debug-v<version>.apk`
+- `androbot-release-v<version>.apk` (signed)
+- `androbot-release-latest.apk` (signed latest alias)
+- `androbot-release-v<version>.aab`
 
 ## Google Play Console checklist
 
