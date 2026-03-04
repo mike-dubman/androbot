@@ -5,7 +5,7 @@
 Trigger the GitHub Actions release pipeline manually:
 
 ```bash
-VERSION=0.2.0 make release-cli  # defaults to published
+make release-cli  # uses app/build.gradle.kts versionName, defaults to published
 ```
 
 Optional inputs:
