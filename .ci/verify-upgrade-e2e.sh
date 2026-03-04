@@ -9,8 +9,14 @@ OLD_VERSION_CODE="${OLD_VERSION_CODE:-5001}"
 NEW_VERSION_CODE="${NEW_VERSION_CODE:-5002}"
 OLD_VERSION_NAME="${OLD_VERSION_NAME:-e2e-old}"
 NEW_VERSION_NAME="${NEW_VERSION_NAME:-e2e-new}"
-OLD_APK="app/build/outputs/apk/debug/app-debug-old.apk"
-NEW_APK="app/build/outputs/apk/debug/app-debug-new.apk"
+TMP_DIR="$(mktemp -d)"
+OLD_APK="${TMP_DIR}/app-debug-old.apk"
+NEW_APK="${TMP_DIR}/app-debug-new.apk"
+
+cleanup() {
+  rm -rf "$TMP_DIR"
+}
+trap cleanup EXIT
 
 trusted_state_line() {
   local label="$1"
