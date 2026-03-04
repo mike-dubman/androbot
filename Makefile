@@ -24,7 +24,8 @@ help:
 	@echo "Optional: APK_PATH=<path-to-apk> DEVICE=<adb-serial> make install"
 	@echo "Optional: APK_PATH=<path-to-apk> PHONE_IP=<phone-lan-ip> PHONE_PORT=5555 make deploy"
 	@echo "Required for release: VERSION=0.2.0 make release"
-	@echo "Required for release-cli: VERSION=0.2.0 [RELEASE_PUBLISH=published|draft] make release-cli"
+	@echo "Optional for release-cli: VERSION=0.2.0 (defaults to app/build.gradle.kts versionName)"
+	@echo "Optional for release-cli: RELEASE_PUBLISH=published|draft RELEASE_NOTES='...' "
 
 doctor:
 	@./scripts/dev.sh doctor
@@ -75,17 +76,22 @@ release:
 	@VERSION="$(VERSION)" ./scripts/release.sh
 
 release-cli:
-	@if [ -z "$(VERSION)" ]; then \
-	  echo "VERSION is required. Example: VERSION=0.2.0 make release-cli"; \
+	@RESOLVED_VERSION="$(VERSION)"; \
+	if [ -z "$$RESOLVED_VERSION" ]; then \
+	  RESOLVED_VERSION="$$(sed -nE 's/^[[:space:]]*versionName[[:space:]]*=[[:space:]]*\"([^\"]+)\".*/\1/p' app/build.gradle.kts | head -n1)"; \
+	fi; \
+	if [ -z "$$RESOLVED_VERSION" ]; then \
+	  echo "Unable to resolve VERSION from app/build.gradle.kts. Set VERSION explicitly."; \
 	  exit 1; \
-	fi
-	@PUBLISH="$${RELEASE_PUBLISH:-published}"; \
+	fi; \
+	PUBLISH="$${RELEASE_PUBLISH:-published}"; \
 	if [ "$$PUBLISH" != "draft" ] && [ "$$PUBLISH" != "published" ]; then \
 	  echo "RELEASE_PUBLISH must be draft or published"; \
 	  exit 1; \
 	fi; \
+	echo "Triggering release workflow for version=$$RESOLVED_VERSION publish=$$PUBLISH"; \
 	if [ -n "$(RELEASE_NOTES)" ]; then \
-	  gh workflow run release.yml -f version="$(VERSION)" -f publish="$$PUBLISH" -f notes="$(RELEASE_NOTES)"; \
+	  gh workflow run release.yml -f version="$$RESOLVED_VERSION" -f publish="$$PUBLISH" -f notes="$(RELEASE_NOTES)"; \
 	else \
-	  gh workflow run release.yml -f version="$(VERSION)" -f publish="$$PUBLISH"; \
+	  gh workflow run release.yml -f version="$$RESOLVED_VERSION" -f publish="$$PUBLISH"; \
 	fi
