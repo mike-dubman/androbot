@@ -31,10 +31,12 @@ class MainActivityUpdateFlowInstrumentationTest {
     @After
     fun tearDown() {
         MainActivity.updaterFactory = { activity -> AppUpdater(activity) }
+        MainActivity.skipPermissionRequestForTests = false
     }
 
     @Test
     fun checkUpdate_whenUpdateAvailable_showsUpdateDialog() {
+        MainActivity.skipPermissionRequestForTests = true
         MainActivity.updaterFactory = {
             FakeUpdater(
                 AppUpdater.CheckResult.UpdateAvailable(
@@ -59,6 +61,7 @@ class MainActivityUpdateFlowInstrumentationTest {
 
     @Test
     fun checkUpdate_whenNoUpdate_showsNoUpdatesDialog() {
+        MainActivity.skipPermissionRequestForTests = true
         MainActivity.updaterFactory = { FakeUpdater(AppUpdater.CheckResult.UpToDate) }
 
         ActivityScenario.launch(MainActivity::class.java).use {
