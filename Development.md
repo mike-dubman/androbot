@@ -99,6 +99,15 @@ CI emulator job also runs app lifecycle verification (`.ci/verify-app-lifecycle.
 - upgrades app in place (`adb install -r`) and verifies trusted sender is preserved
 - uninstalls/reinstalls app and verifies trusted sender list is reset
 
+CI emulator job also runs upgrade E2E verification (`.ci/verify-upgrade-e2e.sh`):
+
+- builds old debug APK with temporary lower version code
+- installs old APK and seeds trusted sender state
+- builds new debug APK with higher version code
+- upgrades in place (`adb install -r`) and verifies:
+  - installed version code changed to new
+  - trusted sender state persisted across upgrade
+
 GitHub Actions runs emulator tests on both `pixel_6` and `pixel_7` profiles.
 
 All tests:

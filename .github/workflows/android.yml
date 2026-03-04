@@ -56,3 +56,4 @@ jobs:
             ./gradlew --no-daemon connectedDebugAndroidTest
             ./.ci/verify-sms-flow.sh emulator-5554
             bash ./.ci/verify-app-lifecycle.sh emulator-5554
+            bash ./.ci/verify-upgrade-e2e.sh emulator-5554
