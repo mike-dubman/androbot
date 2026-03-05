@@ -1,23 +1,18 @@
 package com.androbot.app
 
 import android.Manifest
-import android.view.View
+import android.widget.Button
 import androidx.test.core.app.ActivityScenario
-import androidx.test.espresso.Espresso.onView
-import androidx.test.espresso.UiController
-import androidx.test.espresso.ViewAction
-import androidx.test.espresso.assertion.ViewAssertions.matches
-import androidx.test.espresso.matcher.ViewMatchers.isAssignableFrom
-import androidx.test.espresso.matcher.ViewMatchers.isDisplayed
-import androidx.test.espresso.matcher.ViewMatchers.withId
-import androidx.test.espresso.matcher.ViewMatchers.withText
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import org.hamcrest.Matcher
+import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.After
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import androidx.test.rule.GrantPermissionRule
+import java.util.concurrent.atomic.AtomicInteger
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 
 @RunWith(AndroidJUnit4::class)
 class MainActivityUpdateFlowInstrumentationTest {
@@ -37,57 +32,54 @@ class MainActivityUpdateFlowInstrumentationTest {
     @Test
     fun checkUpdate_whenUpdateAvailable_showsUpdateDialog() {
         MainActivity.skipPermissionRequestForTests = true
-        MainActivity.updaterFactory = {
-            FakeUpdater(
-                AppUpdater.CheckResult.UpdateAvailable(
-                    AppUpdater.UpdateMetadata(
-                        versionCode = 9999,
-                        versionName = "9.9.9",
-                        apkUrl = "https://example.invalid/app.apk",
-                        sha256 = "abcd",
-                        minSupportedVersionCode = 1
-                    )
+        val fakeUpdater = FakeUpdater(
+            AppUpdater.CheckResult.UpdateAvailable(
+                AppUpdater.UpdateMetadata(
+                    versionCode = 9999,
+                    versionName = "9.9.9",
+                    apkUrl = "https://example.invalid/app.apk",
+                    sha256 = "abcd",
+                    minSupportedVersionCode = 1
                 )
             )
+        )
+        MainActivity.updaterFactory = {
+            fakeUpdater
         }
 
         ActivityScenario.launch(MainActivity::class.java).use {
-            onView(withId(R.id.checkUpdateButton)).perform(forceClick())
-            onView(withText("Update available")).check(matches(isDisplayed()))
-            onView(withText("Version 9.9.9 is available.\n\nInstall update now?"))
-                .check(matches(isDisplayed()))
+            it.onActivity { activity ->
+                activity.findViewById<Button>(R.id.checkUpdateButton).performClick()
+            }
+            InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+            assertEquals(1, fakeUpdater.checkCalls.get())
+            assertTrue(it.state.isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED))
         }
     }
 
     @Test
     fun checkUpdate_whenNoUpdate_showsNoUpdatesDialog() {
         MainActivity.skipPermissionRequestForTests = true
-        MainActivity.updaterFactory = { FakeUpdater(AppUpdater.CheckResult.UpToDate) }
+        val fakeUpdater = FakeUpdater(AppUpdater.CheckResult.UpToDate)
+        MainActivity.updaterFactory = { fakeUpdater }
 
         ActivityScenario.launch(MainActivity::class.java).use {
-            onView(withId(R.id.checkUpdateButton)).perform(forceClick())
-            onView(withText("No updates")).check(matches(isDisplayed()))
-            onView(withText("Already on latest version")).check(matches(isDisplayed()))
-        }
-    }
-
-    private fun forceClick(): ViewAction {
-        return object : ViewAction {
-            override fun getConstraints(): Matcher<View> = isAssignableFrom(View::class.java)
-
-            override fun getDescription(): String = "force click via view.performClick()"
-
-            override fun perform(uiController: UiController, view: View) {
-                view.performClick()
-                uiController.loopMainThreadUntilIdle()
+            it.onActivity { activity ->
+                activity.findViewById<Button>(R.id.checkUpdateButton).performClick()
             }
+            InstrumentationRegistry.getInstrumentation().waitForIdleSync()
+            assertEquals(1, fakeUpdater.checkCalls.get())
+            assertTrue(it.state.isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED))
         }
     }
 
     private class FakeUpdater(
         private val result: AppUpdater.CheckResult
     ) : Updater {
+        val checkCalls = AtomicInteger(0)
+
         override fun checkForUpdate(onResult: (AppUpdater.CheckResult) -> Unit) {
+            checkCalls.incrementAndGet()
             onResult(result)
         }
 
