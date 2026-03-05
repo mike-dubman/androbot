@@ -23,8 +23,8 @@ android {
         applicationId = "com.androbot.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = versionCodeOverride ?: 5
-        versionName = if (!versionNameOverride.isNullOrBlank()) versionNameOverride else "0.2.3"
+        versionCode = versionCodeOverride ?: 6
+        versionName = if (!versionNameOverride.isNullOrBlank()) versionNameOverride else "0.2.5"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
