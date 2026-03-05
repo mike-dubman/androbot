@@ -131,7 +131,12 @@ jobs:
           RELEASE_LATEST_URL="https://github.com/${REPO}/releases/latest/download/${RELEASE_LATEST_ASSET}"
           BUNDLE_URL="https://github.com/${REPO}/releases/download/${TAG}/${BUNDLE_ASSET}"
           UPDATE_URL="https://github.com/${REPO}/releases/latest/download/${UPDATE_ASSET}"
-          VERSION_CODE="$(sed -nE 's/^[[:space:]]*versionCode[[:space:]]*=[[:space:]]*([0-9]+).*/\1/p' app/build.gradle.kts | head -n1)"
+          VERSION_CODE="$(
+            sed -nE \
+              -e 's/^[[:space:]]*versionCode[[:space:]]*=[[:space:]]*([0-9]+).*/\1/p' \
+              -e 's/^[[:space:]]*versionCode[[:space:]]*=[[:space:]]*versionCodeOverride[[:space:]]*\?:[[:space:]]*([0-9]+).*/\1/p' \
+              app/build.gradle.kts | head -n1
+          )"
 
           if [[ -z "$VERSION_CODE" ]]; then
             echo "Failed to parse versionCode from app/build.gradle.kts"
