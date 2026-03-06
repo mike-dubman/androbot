@@ -91,6 +91,28 @@ jobs:
         run: |
           ./gradlew --no-daemon assembleDebug assembleRelease bundleRelease
 
+      - name: Enable KVM access
+        run: |
+          sudo sh -c 'echo "KERNEL==\"kvm\", GROUP=\"kvm\", MODE=\"0666\", OPTIONS+=\"static_node=kvm\"" > /etc/udev/rules.d/99-kvm4all.rules'
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Smoke test release APK (install/uninstall/reinstall)
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          force-avd-creation: true
+          disable-animations: true
+          disable-linux-hw-accel: false
+          emulator-boot-timeout: 1200
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back none -camera-front none -no-metrics
+          script: |
+            ./.ci/wait-emulator-healthy.sh emulator-5554 120 2
+            bash ./.ci/verify-release-apk-smoke.sh emulator-5554
+
       - name: Prepare release assets and changelog
         env:
           REPO: ${{ github.repository }}
