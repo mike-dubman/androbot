@@ -22,6 +22,7 @@ Workflow behavior:
 - builds debug and release APK
 - builds release AAB
 - creates/updates tag `v<version>`
+- maps release `version` (`MAJOR.MINOR.PATCH`) to monotonically increasing Android `versionCode` as `MAJOR*10000 + MINOR*100 + PATCH`
 - creates GitHub release (published by default, draft optional)
 - attaches APK/AAB assets
 - writes release body with changelog and direct download links

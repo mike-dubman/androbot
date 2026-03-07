@@ -71,6 +71,16 @@ jobs:
             PLAIN="$VERSION"
           fi
 
+          if [[ "$PLAIN" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+            MAJOR="${BASH_REMATCH[1]}"
+            MINOR="${BASH_REMATCH[2]}"
+            PATCH="${BASH_REMATCH[3]}"
+            VERSION_CODE=$((10#$MAJOR * 10000 + 10#$MINOR * 100 + 10#$PATCH))
+          else
+            echo "Release version must be numeric semver (for example 0.2.6)"
+            exit 1
+          fi
+
           DEBUG_ASSET="androbot-debug-${TAG}.apk"
           RELEASE_ASSET="androbot-release-${TAG}.apk"
           RELEASE_LATEST_ASSET="androbot-release-latest.apk"
@@ -80,6 +90,7 @@ jobs:
 
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           echo "version=$PLAIN" >> "$GITHUB_OUTPUT"
+          echo "version_code=$VERSION_CODE" >> "$GITHUB_OUTPUT"
           echo "debug_asset=$DEBUG_ASSET" >> "$GITHUB_OUTPUT"
           echo "release_asset=$RELEASE_ASSET" >> "$GITHUB_OUTPUT"
           echo "release_latest_asset=$RELEASE_LATEST_ASSET" >> "$GITHUB_OUTPUT"
@@ -88,6 +99,9 @@ jobs:
           echo "update_asset=$UPDATE_ASSET" >> "$GITHUB_OUTPUT"
 
       - name: Build debug/release APKs and release AAB
+        env:
+          ANDROBOT_VERSION_NAME_OVERRIDE: ${{ steps.meta.outputs.version }}
+          ANDROBOT_VERSION_CODE_OVERRIDE: ${{ steps.meta.outputs.version_code }}
         run: |
           ./gradlew --no-daemon assembleDebug assembleRelease bundleRelease
 
@@ -153,17 +167,7 @@ jobs:
           RELEASE_LATEST_URL="https://github.com/${REPO}/releases/latest/download/${RELEASE_LATEST_ASSET}"
           BUNDLE_URL="https://github.com/${REPO}/releases/download/${TAG}/${BUNDLE_ASSET}"
           UPDATE_URL="https://github.com/${REPO}/releases/latest/download/${UPDATE_ASSET}"
-          VERSION_CODE="$(
-            sed -nE \
-              -e 's/^[[:space:]]*versionCode[[:space:]]*=[[:space:]]*([0-9]+).*/\1/p' \
-              -e 's/^[[:space:]]*versionCode[[:space:]]*=[[:space:]]*versionCodeOverride[[:space:]]*\?:[[:space:]]*([0-9]+).*/\1/p' \
-              app/build.gradle.kts | head -n1
-          )"
-
-          if [[ -z "$VERSION_CODE" ]]; then
-            echo "Failed to parse versionCode from app/build.gradle.kts"
-            exit 1
-          fi
+          VERSION_CODE="${{ steps.meta.outputs.version_code }}"
 
           cat > "$UPDATE_ASSET" <<JSON
           {
