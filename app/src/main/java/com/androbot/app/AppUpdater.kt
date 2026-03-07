@@ -122,7 +122,8 @@ class AppUpdater(private val activity: Activity) : Updater {
                     }
                     val status = c.getInt(c.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS))
                     if (status != DownloadManager.STATUS_SUCCESSFUL) {
-                        onStatus("Update download failed")
+                        val reason = c.getInt(c.getColumnIndexOrThrow(DownloadManager.COLUMN_REASON))
+                        onStatus(downloadStatusMessage(status, reason))
                         return
                     }
                 }
@@ -138,16 +139,31 @@ class AppUpdater(private val activity: Activity) : Updater {
                     return
                 }
 
+                val current = currentAppVersion()
+                if (!isRemoteUpdateAvailable(metadata, current)) {
+                    onStatus(
+                        "Downloaded update is not newer than installed app " +
+                            "(current ${current.versionName}/${current.versionCode}, " +
+                            "download ${metadata.versionName}/${metadata.versionCode})"
+                    )
+                    return
+                }
+
                 if (!canRequestPackageInstalls()) {
-                    onStatus("Allow install from unknown apps for Androbot, then retry")
+                    onStatus(
+                        "Install blocked: allow \"Install unknown apps\" for Androbot, then retry"
+                    )
                     openUnknownSourcesSettings()
                     return
                 }
 
                 if (installApk(uri)) {
-                    onStatus("Launching installer...")
+                    onStatus("Installer opened. Tap Install to complete update.")
                 } else {
-                    onStatus("Unable to launch installer")
+                    onStatus(
+                        "Unable to open Android installer. " +
+                            "Try opening the APK manually from Downloads."
+                    )
                 }
             }
         }
@@ -237,6 +253,39 @@ class AppUpdater(private val activity: Activity) : Updater {
     private fun canRequestPackageInstalls(): Boolean {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return true
         return context.packageManager.canRequestPackageInstalls()
+    }
+
+    private fun downloadStatusMessage(status: Int, reason: Int): String {
+        return when (status) {
+            DownloadManager.STATUS_PAUSED ->
+                "Update download paused (${downloadReasonLabel(reason)})"
+            DownloadManager.STATUS_PENDING ->
+                "Update download pending"
+            DownloadManager.STATUS_RUNNING ->
+                "Update download still running"
+            DownloadManager.STATUS_FAILED ->
+                "Update download failed (${downloadReasonLabel(reason)})"
+            else -> "Update download failed (status=$status reason=$reason)"
+        }
+    }
+
+    private fun downloadReasonLabel(reason: Int): String {
+        return when (reason) {
+            DownloadManager.ERROR_CANNOT_RESUME -> "cannot resume"
+            DownloadManager.ERROR_DEVICE_NOT_FOUND -> "storage not found"
+            DownloadManager.ERROR_FILE_ALREADY_EXISTS -> "file already exists"
+            DownloadManager.ERROR_FILE_ERROR -> "file error"
+            DownloadManager.ERROR_HTTP_DATA_ERROR -> "network data error"
+            DownloadManager.ERROR_INSUFFICIENT_SPACE -> "insufficient space"
+            DownloadManager.ERROR_TOO_MANY_REDIRECTS -> "too many redirects"
+            DownloadManager.ERROR_UNHANDLED_HTTP_CODE -> "server response error"
+            DownloadManager.ERROR_UNKNOWN -> "unknown error"
+            DownloadManager.PAUSED_QUEUED_FOR_WIFI -> "waiting for Wi-Fi"
+            DownloadManager.PAUSED_WAITING_FOR_NETWORK -> "waiting for network"
+            DownloadManager.PAUSED_WAITING_TO_RETRY -> "waiting to retry"
+            DownloadManager.PAUSED_UNKNOWN -> "paused"
+            else -> "reason=$reason"
+        }
     }
 
     private fun fetchMetadata(): UpdateMetadata {
