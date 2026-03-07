@@ -26,6 +26,7 @@ Current scope is intentionally narrow:
   - `data off`
   - `data on`
   - `call me back` (places callback to trusted sender and enables speaker mode)
+  - `update software` (opens app and runs OTA update check)
 - Trusted sender management:
   - Primary: in-app UI (add/remove/list)
   - Optional: SMS commands from a trusted sender (`trusted add/remove/list`)
@@ -177,6 +178,7 @@ Declared in manifest:
 - `data off`
 - `data on`
 - `call me back`
+- `update software`
 - `trusted add <phone>`
 - `trusted remove <phone>`
 - `trusted list`

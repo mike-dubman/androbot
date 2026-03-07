@@ -26,6 +26,9 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:minWidth="0dp"
                 android:text="Add" />
 
             <Button
@@ -34,6 +37,9 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="8dp"
                 android:layout_weight="1"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:minWidth="0dp"
                 android:text="Remove" />
         </LinearLayout>
 
@@ -48,6 +54,9 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:minWidth="0dp"
                 android:text="About" />
 
             <Button
@@ -56,7 +65,10 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="8dp"
                 android:layout_weight="1"
-                android:text="Check update" />
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:minWidth="0dp"
+                android:text="Update" />
 
             <Button
                 android:id="@+id/closeTrustedSenderScreenButton"
@@ -64,6 +76,9 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="8dp"
                 android:layout_weight="1"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:minWidth="0dp"
                 android:text="Close" />
         </LinearLayout>
 
