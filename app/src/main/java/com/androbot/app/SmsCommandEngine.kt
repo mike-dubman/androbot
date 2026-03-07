@@ -74,6 +74,7 @@ class SmsCommandEngine(private val context: Context) {
             is Command.DataReset -> executed = resetMobileData()
             is Command.DataOn -> executed = setMobileDataEnabled(true)
             is Command.DataOff -> executed = setMobileDataEnabled(false)
+            is Command.UpdateSoftware -> executed = launchUpdateFlow()
         }
 
         return if (executed) Result.EXECUTED else Result.IGNORED
@@ -90,6 +91,7 @@ class SmsCommandEngine(private val context: Context) {
         data object DataReset : Command
         data object DataOn : Command
         data object DataOff : Command
+        data object UpdateSoftware : Command
     }
 
     private fun safeSetVolume(audioManager: AudioManager, stream: Int, value: Int) {
@@ -207,6 +209,23 @@ class SmsCommandEngine(private val context: Context) {
         return runShellCommand("svc data $svcArg", "mobile data set ${if (enabled) "on" else "off"}")
     }
 
+    private fun launchUpdateFlow(): Boolean {
+        return try {
+            val intent = Intent(context, MainActivity::class.java).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                putExtra(MainActivity.EXTRA_TRIGGER_UPDATE_FROM_SMS, true)
+            }
+            context.startActivity(intent)
+            Log.i(TAG, "Triggered update flow via MainActivity")
+            true
+        } catch (e: Exception) {
+            Log.i(TAG, "Failed to trigger update flow: ${e.javaClass.simpleName}")
+            false
+        }
+    }
+
     private fun runShellCommand(command: String, operation: String): Boolean {
         return try {
             val process = Runtime.getRuntime().exec(arrayOf("sh", "-c", command))
@@ -267,6 +286,9 @@ class SmsCommandEngine(private val context: Context) {
             }
             if (normalized == "data off") {
                 return Command.DataOff
+            }
+            if (normalized == "update software") {
+                return Command.UpdateSoftware
             }
 
             val match = PERCENT_REGEX.matchEntire(normalized) ?: return null

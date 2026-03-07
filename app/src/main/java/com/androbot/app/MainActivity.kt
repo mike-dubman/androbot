@@ -1,6 +1,7 @@
 package com.androbot.app
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
@@ -35,6 +36,13 @@ class MainActivity : AppCompatActivity() {
         setupTrustedSenderUi()
         renderStatus()
         renderTrustedSenders()
+        handleIntentActions(intent)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleIntentActions(intent)
     }
 
     override fun onResume() {
@@ -83,6 +91,15 @@ class MainActivity : AppCompatActivity() {
                 is AppUpdater.CheckResult.UpdateAvailable -> showUpdateAvailableDialog(result.metadata)
             }
         }
+    }
+
+    private fun handleIntentActions(intent: Intent?) {
+        if (intent?.getBooleanExtra(EXTRA_TRIGGER_UPDATE_FROM_SMS, false) != true) {
+            return
+        }
+        intent.removeExtra(EXTRA_TRIGGER_UPDATE_FROM_SMS)
+        Toast.makeText(this, "SMS requested update check", Toast.LENGTH_SHORT).show()
+        checkForUpdates()
     }
 
     private fun showUpdateAvailableDialog(metadata: AppUpdater.UpdateMetadata) {
@@ -189,6 +206,7 @@ class MainActivity : AppCompatActivity() {
             append("- data off\n")
             append("- data on\n\n")
             append("- call me back (calls trusted sender, enables speaker)\n\n")
+            append("- update software (opens app and checks OTA update)\n\n")
             append("Trusted sender management:\n")
             append("- Add/Remove/List via this UI\n")
             append("- Optional SMS management from trusted sender:\n")
@@ -252,6 +270,7 @@ class MainActivity : AppCompatActivity() {
 
     companion object {
         private const val PROJECT_URL = "https://github.com/mike-dubman/androbot"
+        const val EXTRA_TRIGGER_UPDATE_FROM_SMS = "extra_trigger_update_from_sms"
         @Volatile
         var updaterFactory: (AppCompatActivity) -> Updater = { activity -> AppUpdater(activity) }
         @Volatile
