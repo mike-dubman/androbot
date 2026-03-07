@@ -51,10 +51,10 @@ class AppUpdater(private val activity: Activity) : Updater {
         Thread {
             val result = try {
                 val metadata = fetchMetadata()
-                val currentVersion = currentVersionCode()
+                val current = currentAppVersion()
                 when {
-                    metadata.versionCode <= currentVersion -> CheckResult.UpToDate
-                    currentVersion < metadata.minSupportedVersionCode ->
+                    !isRemoteUpdateAvailable(metadata, current) -> CheckResult.UpToDate
+                    current.versionCode < metadata.minSupportedVersionCode ->
                         CheckResult.Error(
                             "Current app version is too old for direct upgrade path."
                         )
@@ -67,6 +67,19 @@ class AppUpdater(private val activity: Activity) : Updater {
             }
             activity.runOnUiThread { onResult(result) }
         }.start()
+    }
+
+    private data class InstalledVersion(
+        val versionCode: Long,
+        val versionName: String
+    )
+
+    private fun isRemoteUpdateAvailable(metadata: UpdateMetadata, current: InstalledVersion): Boolean {
+        return when {
+            metadata.versionCode > current.versionCode -> true
+            metadata.versionCode < current.versionCode -> false
+            else -> isVersionNameNewer(metadata.versionName, current.versionName)
+        }
     }
 
     override fun downloadAndInstall(metadata: UpdateMetadata, onStatus: (String) -> Unit) {
@@ -244,7 +257,7 @@ class AppUpdater(private val activity: Activity) : Updater {
         }
     }
 
-    private fun currentVersionCode(): Long {
+    private fun currentAppVersion(): InstalledVersion {
         val info = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             context.packageManager.getPackageInfo(
                 context.packageName,
@@ -254,17 +267,40 @@ class AppUpdater(private val activity: Activity) : Updater {
             @Suppress("DEPRECATION")
             context.packageManager.getPackageInfo(context.packageName, 0)
         }
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+        val versionCode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             info.longVersionCode
         } else {
             @Suppress("DEPRECATION")
             info.versionCode.toLong()
         }
+        val versionName = info.versionName ?: ""
+        return InstalledVersion(versionCode = versionCode, versionName = versionName)
     }
 
     companion object {
         private const val TAG = "AppUpdater"
         private const val METADATA_URL =
             "https://github.com/mike-dubman/androbot/releases/latest/download/androbot-update.json"
+
+        internal fun isVersionNameNewer(remote: String, local: String): Boolean {
+            val remoteParts = parseVersionParts(remote) ?: return false
+            val localParts = parseVersionParts(local) ?: return false
+            val maxLen = maxOf(remoteParts.size, localParts.size)
+            for (i in 0 until maxLen) {
+                val remoteValue = remoteParts.getOrElse(i) { 0 }
+                val localValue = localParts.getOrElse(i) { 0 }
+                if (remoteValue > localValue) return true
+                if (remoteValue < localValue) return false
+            }
+            return false
+        }
+
+        private fun parseVersionParts(version: String): List<Int>? {
+            val trimmed = version.trim()
+            if (!VERSION_NAME_REGEX.matches(trimmed)) return null
+            return trimmed.split('.').map { it.toInt() }
+        }
+
+        private val VERSION_NAME_REGEX = Regex("^\\d+(?:\\.\\d+)*$")
     }
 }
