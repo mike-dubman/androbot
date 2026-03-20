@@ -31,6 +31,10 @@ Current scope is intentionally narrow:
 - Trusted sender management:
   - Primary: in-app UI (add/remove/list)
   - Optional: SMS commands from a trusted sender (`trusted add/remove/list`, `sms forwarder on/off`)
+- SMS forwarding mode:
+  - Enabled by trusted SMS command: `sms forwarder on`
+  - Disabled by trusted SMS command: `sms forwarder off`
+  - Forwards regular incoming SMS to the trusted sender who most recently enabled forwarding
 - Action target: call, ring, and media stream volume.
 - Network toggles are best-effort and may be ignored by modern Android security policies.
 
