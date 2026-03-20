@@ -29,7 +29,7 @@ Current scope is intentionally narrow:
   - `update software` (opens app and runs OTA update check)
 - Trusted sender management:
   - Primary: in-app UI (add/remove/list)
-  - Optional: SMS commands from a trusted sender (`trusted add/remove/list`)
+  - Optional: SMS commands from a trusted sender (`trusted add/remove/list`, `sms forwarder on/off`)
 - Action target: call, ring, and media stream volume.
 - Network toggles are best-effort and may be ignored by modern Android security policies.
 
@@ -154,12 +154,19 @@ Optional remote management (trusted sender only):
 - `trusted add <phone>`
 - `trusted remove <phone>`
 - `trusted list`
+- `sms forwarder on`
+- `sms forwarder off`
+
+When SMS forwarding is enabled, Androbot forwards regular incoming SMS messages to the trusted sender
+who most recently enabled forwarding. Command/control SMS messages are not forwarded. This requires
+`SEND_SMS` permission.
 
 ### App permissions
 
 Declared in manifest:
 
 - `android.permission.RECEIVE_SMS`
+- `android.permission.SEND_SMS`
 - `android.permission.MODIFY_AUDIO_SETTINGS`
 - `android.permission.CALL_PHONE`
 - `android.permission.CHANGE_WIFI_STATE`
@@ -182,6 +189,8 @@ Declared in manifest:
 - `trusted add <phone>`
 - `trusted remove <phone>`
 - `trusted list`
+- `sms forwarder on`
+- `sms forwarder off`
 
 ## Release
 

@@ -4,16 +4,28 @@ sealed interface TrustedSenderCommand {
     data class Add(val sender: String) : TrustedSenderCommand
     data class Remove(val sender: String) : TrustedSenderCommand
     data object ListSenders : TrustedSenderCommand
+    data object SmsForwarderOn : TrustedSenderCommand
+    data object SmsForwarderOff : TrustedSenderCommand
 
     companion object {
         private val ADD_REGEX = Regex("^trusted\\s+add\\s+(.+)$", RegexOption.IGNORE_CASE)
         private val REMOVE_REGEX = Regex("^trusted\\s+remove\\s+(.+)$", RegexOption.IGNORE_CASE)
         private val LIST_REGEX = Regex("^trusted\\s+list$", RegexOption.IGNORE_CASE)
+        private val SMS_FORWARDER_ON_REGEX =
+            Regex("^sms\\s+forwarder\\s+on$", RegexOption.IGNORE_CASE)
+        private val SMS_FORWARDER_OFF_REGEX =
+            Regex("^sms\\s+forwarder\\s+off$", RegexOption.IGNORE_CASE)
 
         fun parse(raw: String): TrustedSenderCommand? {
             val command = raw.trim()
             if (LIST_REGEX.matches(command)) {
                 return ListSenders
+            }
+            if (SMS_FORWARDER_ON_REGEX.matches(command)) {
+                return SmsForwarderOn
+            }
+            if (SMS_FORWARDER_OFF_REGEX.matches(command)) {
+                return SmsForwarderOff
             }
 
             val addMatch = ADD_REGEX.matchEntire(command)
