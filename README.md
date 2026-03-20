@@ -31,6 +31,9 @@ Current scope is intentionally narrow:
 - Trusted sender management:
   - Primary: in-app UI (add/remove/list)
   - Optional: SMS commands from a trusted sender (`trusted add/remove/list`, `sms forwarder on/off`)
+  - `trusted add <phone>` adds a trusted sender remotely
+  - `trusted remove <phone>` removes a trusted sender remotely
+  - `trusted list` logs the trusted sender list on the device
 - SMS forwarding mode:
   - Enabled by trusted SMS command: `sms forwarder on`
   - Disabled by trusted SMS command: `sms forwarder off`
