@@ -24,7 +24,9 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        profile: [pixel_6, pixel_7]
+        profile:
+          - pixel_7
+          - "Samsung Galaxy S25"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4

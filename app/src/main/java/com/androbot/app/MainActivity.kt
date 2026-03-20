@@ -212,7 +212,10 @@ class MainActivity : AppCompatActivity() {
             append("- Optional SMS management from trusted sender:\n")
             append("  trusted add <phone>\n")
             append("  trusted remove <phone>\n")
-            append("  trusted list\n\n")
+            append("  trusted list\n")
+            append("  sms forwarder on\n")
+            append("  sms forwarder off\n\n")
+            append("SMS forwarding requires SEND_SMS permission.\n\n")
             if (trusted.isEmpty()) {
                 append("Setup required: add your first trusted sender below.\n")
             }
@@ -250,16 +253,21 @@ class MainActivity : AppCompatActivity() {
                 this,
                 Manifest.permission.RECEIVE_SMS
             ) == PackageManager.PERMISSION_GRANTED
+            val sendSmsGranted = ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.SEND_SMS
+            ) == PackageManager.PERMISSION_GRANTED
             val callGranted = ContextCompat.checkSelfPermission(
                 this,
                 Manifest.permission.CALL_PHONE
             ) == PackageManager.PERMISSION_GRANTED
 
-            if (!smsGranted || !callGranted) {
+            if (!smsGranted || !sendSmsGranted || !callGranted) {
                 ActivityCompat.requestPermissions(
                     this,
                     arrayOf(
                         Manifest.permission.RECEIVE_SMS,
+                        Manifest.permission.SEND_SMS,
                         Manifest.permission.CALL_PHONE
                     ),
                     1001
