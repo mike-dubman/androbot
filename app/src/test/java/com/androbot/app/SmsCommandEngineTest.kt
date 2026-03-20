@@ -44,6 +44,14 @@ class SmsCommandEngineTest {
     }
 
     @Test
+    fun parseInfoCommand() {
+        assertEquals(
+            SmsCommandEngine.Command.Info,
+            SmsCommandEngine.parseCommand("info")
+        )
+    }
+
+    @Test
     fun rejectUnknownCommand() {
         assertNull(SmsCommandEngine.parseCommand("reboot now"))
     }
