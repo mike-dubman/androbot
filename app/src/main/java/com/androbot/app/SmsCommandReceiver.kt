@@ -14,11 +14,14 @@ class SmsCommandReceiver : BroadcastReceiver() {
         }
 
         val policy = TrustedSenderPolicy(context)
+        val forwarderPolicy = SmsForwarderPolicy(context)
+        val forwarder = SmsForwarder(context)
         val engine = SmsCommandEngine(context)
 
         Telephony.Sms.Intents.getMessagesFromIntent(intent).forEach { smsMessage ->
             val sender = smsMessage.displayOriginatingAddress ?: return@forEach
             val body = smsMessage.messageBody ?: return@forEach
+            val actionCommand = SmsCommandEngine.parseCommand(body)
 
             if (policy.trustedSenders().isEmpty()) {
                 Log.i(TAG, "Ignoring SMS: no trusted senders configured yet. Add first sender in app UI.")
@@ -32,22 +35,30 @@ class SmsCommandReceiver : BroadcastReceiver() {
                     return@forEach
                 }
 
-                handleTrustedCommand(policy, trustedCommand, sender)
+                handleTrustedCommand(policy, forwarderPolicy, trustedCommand, sender)
                 return@forEach
             }
 
-            if (!policy.isTrusted(sender)) {
-                Log.i(TAG, "Ignoring SMS from untrusted sender: $sender")
+            if (actionCommand != null) {
+                if (!policy.isTrusted(sender)) {
+                    Log.i(TAG, "Ignoring SMS action command from untrusted sender: $sender")
+                    return@forEach
+                }
+
+                val result = engine.execute(body, sender)
+                Log.i(TAG, "Command from $sender -> ${result.name}")
                 return@forEach
             }
 
-            val result = engine.execute(body, sender)
-            Log.i(TAG, "Command from $sender -> ${result.name}")
+            val forwarded = forwarder.forwardIncomingSms(sender, body)
+            val trustLabel = if (policy.isTrusted(sender)) "trusted" else "untrusted"
+            Log.i(TAG, "Regular SMS from $trustLabel sender $sender -> forwarded=$forwarded")
         }
     }
 
     private fun handleTrustedCommand(
         policy: TrustedSenderPolicy,
+        forwarderPolicy: SmsForwarderPolicy,
         command: TrustedSenderCommand,
         sender: String
     ) {
@@ -65,6 +76,16 @@ class SmsCommandReceiver : BroadcastReceiver() {
             is TrustedSenderCommand.ListSenders -> {
                 val senders = policy.trustedSenders().joinToString(",")
                 Log.i(TAG, "Trusted sender list requested by $sender -> $senders")
+            }
+
+            is TrustedSenderCommand.SmsForwarderOn -> {
+                forwarderPolicy.enableForSender(sender)
+                Log.i(TAG, "SMS forwarder enabled by $sender")
+            }
+
+            is TrustedSenderCommand.SmsForwarderOff -> {
+                forwarderPolicy.disable()
+                Log.i(TAG, "SMS forwarder disabled by $sender")
             }
         }
     }

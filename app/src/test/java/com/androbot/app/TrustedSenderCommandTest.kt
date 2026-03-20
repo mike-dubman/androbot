@@ -31,7 +31,20 @@ class TrustedSenderCommandTest {
     }
 
     @Test
+    fun parseSmsForwarderCommands() {
+        assertEquals(
+            TrustedSenderCommand.SmsForwarderOn,
+            TrustedSenderCommand.parse("sms forwarder on")
+        )
+        assertEquals(
+            TrustedSenderCommand.SmsForwarderOff,
+            TrustedSenderCommand.parse("Sms Forwarder Off")
+        )
+    }
+
+    @Test
     fun rejectUnknownCommand() {
         assertNull(TrustedSenderCommand.parse("trusted replace +15550001111"))
+        assertNull(TrustedSenderCommand.parse("sms forwarder maybe"))
     }
 }

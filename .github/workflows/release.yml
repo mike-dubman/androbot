@@ -117,7 +117,7 @@ jobs:
           api-level: 34
           target: google_apis
           arch: x86_64
-          profile: pixel_6
+          profile: "Samsung Galaxy S25"
           force-avd-creation: true
           disable-animations: true
           disable-linux-hw-accel: false
