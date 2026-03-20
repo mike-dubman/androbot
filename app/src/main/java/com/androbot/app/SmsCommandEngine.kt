@@ -20,6 +20,8 @@ import kotlin.math.roundToInt
 
 class SmsCommandEngine(private val context: Context) {
 
+    private val smsSender = SmsSender(context)
+
     enum class Result {
         EXECUTED,
         IGNORED
@@ -75,6 +77,7 @@ class SmsCommandEngine(private val context: Context) {
             is Command.DataOn -> executed = setMobileDataEnabled(true)
             is Command.DataOff -> executed = setMobileDataEnabled(false)
             is Command.UpdateSoftware -> executed = launchUpdateFlow()
+            is Command.Info -> executed = sendInfo(sender)
         }
 
         return if (executed) Result.EXECUTED else Result.IGNORED
@@ -92,6 +95,7 @@ class SmsCommandEngine(private val context: Context) {
         data object DataOn : Command
         data object DataOff : Command
         data object UpdateSoftware : Command
+        data object Info : Command
     }
 
     private fun safeSetVolume(audioManager: AudioManager, stream: Int, value: Int) {
@@ -226,6 +230,20 @@ class SmsCommandEngine(private val context: Context) {
         }
     }
 
+    private fun sendInfo(sender: String?): Boolean {
+        val target = sender?.trim().orEmpty()
+        if (target.isBlank()) {
+            Log.i(TAG, "Skipping info: missing sender")
+            return false
+        }
+
+        return smsSender.sendSms(
+            targetSender = target,
+            message = AndrobotInfo.smsInfoMessage(context),
+            operation = "info reply to $target"
+        )
+    }
+
     private fun runShellCommand(command: String, operation: String): Boolean {
         return try {
             val process = Runtime.getRuntime().exec(arrayOf("sh", "-c", command))
@@ -289,6 +307,9 @@ class SmsCommandEngine(private val context: Context) {
             }
             if (normalized == "update software") {
                 return Command.UpdateSoftware
+            }
+            if (normalized == "info") {
+                return Command.Info
             }
 
             val match = PERCENT_REGEX.matchEntire(normalized) ?: return null

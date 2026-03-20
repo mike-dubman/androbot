@@ -27,6 +27,7 @@ Current scope is intentionally narrow:
   - `data on`
   - `call me back` (places callback to trusted sender and enables speaker mode)
   - `update software` (opens app and runs OTA update check)
+  - `info` (replies by SMS with current Androbot version and supported commands)
 - Trusted sender management:
   - Primary: in-app UI (add/remove/list)
   - Optional: SMS commands from a trusted sender (`trusted add/remove/list`, `sms forwarder on/off`)
@@ -186,6 +187,7 @@ Declared in manifest:
 - `data on`
 - `call me back`
 - `update software`
+- `info`
 - `trusted add <phone>`
 - `trusted remove <phone>`
 - `trusted list`

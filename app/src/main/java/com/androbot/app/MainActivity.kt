@@ -206,7 +206,8 @@ class MainActivity : AppCompatActivity() {
             append("- data off\n")
             append("- data on\n\n")
             append("- call me back (calls trusted sender, enables speaker)\n\n")
-            append("- update software (opens app and checks OTA update)\n\n")
+            append("- update software (opens app and checks OTA update)\n")
+            append("- info (replies by SMS with version and commands)\n\n")
             append("Trusted sender management:\n")
             append("- Add/Remove/List via this UI\n")
             append("- Optional SMS management from trusted sender:\n")
@@ -228,23 +229,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun appVersionLabel(): String {
-        val info = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            packageManager.getPackageInfo(
-                packageName,
-                PackageManager.PackageInfoFlags.of(0)
-            )
-        } else {
-            @Suppress("DEPRECATION")
-            packageManager.getPackageInfo(packageName, 0)
-        }
-        val name = info.versionName ?: "unknown"
-        val code = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            info.longVersionCode
-        } else {
-            @Suppress("DEPRECATION")
-            info.versionCode.toLong()
-        }
-        return "v$name ($code)"
+        return AndrobotInfo.versionLabel(this)
     }
 
     private fun ensureSmsPermission() {
